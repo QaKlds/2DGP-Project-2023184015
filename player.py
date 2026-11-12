@@ -2,12 +2,16 @@ from pico2d import (load_image, SDL_KEYDOWN, SDL_KEYUP,
                     SDLK_LEFT, SDLK_RIGHT, SDLK_UP, SDLK_TAB, SDLK_z, SDLK_x)
 
 from anim import Anim
-from config import (WIDTH, CELL, SCALE, GROUND_Y, FOOT_IN_CELL,
-                    MOVE_SPEED, JUMP_SPEED, JUMP_CUT_SPEED, GRAVITY)
+from config import (CELL, SCALE, FOOT_IN_CELL, PLAYER_HALF_W, PLAYER_H,
+                    MOVE_SPEED, JUMP_SPEED, JUMP_CUT_SPEED, GRAVITY, MAX_FALL_SPEED,
+                    ICE_ACCEL, ICE_FRICTION, INVINCIBLE_TIME)
+
+KNOCKED = ('fall', 'down', 'getup')     # 넘어져서 조작할 수 없는 상태
+MAX_STEP = 0.008                        # 빠르게 떨어질 때 타일을 뚫지 않도록 나눠서 이동
 
 
 class Player:
-    def __init__(self):
+    def __init__(self, x, y):
         main = load_image('asset/player/spritesheet_left.png')
         extra = load_image('asset/player/player_extra_left.png')
         self.anims = {
@@ -21,12 +25,14 @@ class Player:
             'jump_sword':  Anim(extra, 2, 7, 20, loop=False),
             'jump_gun':    Anim(extra, 3, 6, 18, loop=False),
         }
-        self.x, self.y = WIDTH // 2, GROUND_Y
-        self.vy = 0
-        self.facing = -1          # -1: 왼쪽, 1: 오른쪽
+        self.x, self.y = x, y          # 발 중앙
+        self.vx = self.vy = 0.0
+        self.facing = 1                # -1: 왼쪽, 1: 오른쪽
         self.left = self.right = False
         self.weapon = 'sword'
         self.on_ground = True
+        self.on_ice = False
+        self.invincible = 0.0
         self.set_state('idle')
 
     # ---------------- 상태 ----------------
@@ -34,9 +40,25 @@ class Player:
         self.state = state
         self.t = 0.0
 
-    def busy(self):
-        """조작을 막는 상태인지"""
-        return self.state in ('fall', 'down', 'getup', 'attack')
+    def hitbox(self):
+        return (self.x - PLAYER_HALF_W, self.y, self.x + PLAYER_HALF_W, self.y + PLAYER_H)
+
+    def can_control(self):
+        """좌우 입력을 받는 상태인지 (넘어짐 중, 땅에서 공격 중에는 X)"""
+        if self.state in KNOCKED:
+            return False
+        return not (self.state == 'attack' and self.on_ground)
+
+    def hit(self, push_dir, knock_x, knock_y):
+        """함정에 맞음: push_dir 쪽으로 날아가며 뒤로 넘어짐"""
+        if self.invincible > 0 or self.state in KNOCKED:
+            return
+        self.facing = -push_dir         # 밀려나는 반대쪽을 보며 뒤로 넘어짐
+        self.vx = push_dir * knock_x
+        if knock_y > 0:
+            self.vy = knock_y
+            self.on_ground = False
+        self.set_state('fall')
 
     # ---------------- 입력 ----------------
     def handle_event(self, e):
@@ -49,7 +71,7 @@ class Player:
                 if self.state not in ('attack', 'jump_attack'):     # 공격 중에는 무기 교체 불가
                     self.weapon = 'gun' if self.weapon == 'sword' else 'sword'
             elif e.key == SDLK_UP:
-                if self.on_ground and not self.busy():
+                if self.on_ground and self.state in ('idle', 'walk', 'land'):
                     self.vy = JUMP_SPEED
                     self.on_ground = False
                     self.set_state('jump')
@@ -59,8 +81,9 @@ class Player:
                 elif self.state == 'jump':
                     self.set_state('jump_attack')
             elif e.key == SDLK_x:
+                # 테스트용: 제자리에서 뒤로 넘어지기
                 if self.on_ground and self.state in ('idle', 'walk', 'land'):
-                    self.set_state('fall')
+                    self.hit(-self.facing, 0, 0)
         elif e.type == SDL_KEYUP:
             if e.key == SDLK_LEFT:
                 self.left = False
@@ -72,50 +95,103 @@ class Player:
                     self.vy = JUMP_CUT_SPEED
 
     # ---------------- 갱신 ----------------
-    def update(self, dt):
+    def update(self, dt, tilemap):
         self.t += dt
+        self.invincible = max(0.0, self.invincible - dt)
         direction = self.right - self.left
+        control = self.can_control()
 
-        # 수평 이동 (지상 공격/넘어짐 중에는 멈춤)
-        if not self.busy() and direction != 0:
+        # 수평 속도
+        target = direction * MOVE_SPEED if control else 0.0
+        if control and direction != 0:
             self.facing = direction
-            self.x += direction * MOVE_SPEED * dt
-            self.x = max(CELL // 2, min(WIDTH - CELL // 2, self.x))
+        if self.on_ground:
+            if self.on_ice:
+                rate = ICE_ACCEL if target != 0 else ICE_FRICTION
+                self.vx = approach(self.vx, target, rate * dt)
+            else:
+                self.vx = target
+        elif control:
+            self.vx = target            # 공중 조작 (넘어져 날아가는 중에는 속도 유지)
 
-        # 중력
-        if not self.on_ground:
-            self.vy -= GRAVITY * dt
-            self.y += self.vy * dt
-            if self.y <= GROUND_Y:
-                self.y, self.vy = GROUND_Y, 0
-                self.on_ground = True
-                if self.state == 'jump_attack':
-                    # 공중 공격 스프라이트는 그림 안에서 위로 떠 있으므로,
-                    # 착지하면 진행된 비율만큼 지상 공격 애니메이션으로 이어서 재생
-                    progress = self.t / self.anims['jump_' + self.weapon].duration
-                    self.set_state('attack')
-                    self.t = progress * self.anims[self.weapon].duration
-                else:
-                    self.set_state('land')
+        # 이동 + 충돌 (조금씩 나눠서)
+        remaining = dt
+        while remaining > 0:
+            step = min(MAX_STEP, remaining)
+            remaining -= step
+            if not self.on_ground:
+                self.vy = max(-MAX_FALL_SPEED, self.vy - GRAVITY * step)
+            self.move_x(self.vx * step, tilemap)
+            self.move_y(self.vy * step, tilemap)
 
-        # 상태 전환
+        self.check_ground(tilemap)
+        self.update_state(direction)
+
+    def move_x(self, dx, tilemap):
+        if dx == 0:
+            return
+        self.x += dx
+        for (l, b, r, t), _ in tilemap.solids_in(*self.hitbox()):
+            if dx > 0:
+                self.x = l - PLAYER_HALF_W
+            else:
+                self.x = r + PLAYER_HALF_W
+            self.vx = 0.0
+
+    def move_y(self, dy, tilemap):
+        if dy == 0:
+            return
+        self.y += dy
+        for (l, b, r, t), ice in tilemap.solids_in(*self.hitbox()):
+            if dy < 0:
+                self.y = t
+                self.vy = 0.0
+                if not self.on_ground:
+                    self.on_ground = True
+                    self.on_landed()
+            else:
+                self.y = b - PLAYER_H
+                self.vy = 0.0
+
+    def check_ground(self, tilemap):
+        """발 바로 아래에 땅이 있는지, 얼음인지 확인"""
+        feet = (self.x - PLAYER_HALF_W + 1, self.y - 1, self.x + PLAYER_HALF_W - 1, self.y)
+        under = tilemap.solids_in(*feet) if self.vy <= 0 else []
+        self.on_ground = bool(under)
+        self.on_ice = any(ice for _, ice in under)
+
+    def on_landed(self):
         s = self.state
-        if s in ('idle', 'walk'):
+        if s == 'jump':
+            self.set_state('land')
+        elif s == 'jump_attack':
+            # 공중 공격 스프라이트는 그림 안에서 위로 떠 있으므로,
+            # 착지하면 진행된 비율만큼 지상 공격 애니메이션으로 이어서 재생
+            progress = self.t / self.anims['jump_' + self.weapon].duration
+            self.set_state('attack')
+            self.t = progress * self.anims[self.weapon].duration
+
+    def update_state(self, direction):
+        s = self.state
+        if s in ('idle', 'walk', 'land') and not self.on_ground:
+            self.set_state('jump')                       # 발판에서 걸어 나가 떨어짐
+        elif s in ('idle', 'walk'):
             want = 'walk' if direction != 0 else 'idle'
             if want != s:
                 self.set_state(want)
         elif s == 'land' and self.t >= 0.08:
             self.set_state('idle')
         elif s == 'attack' and self.t >= self.anims[self.weapon].duration:
-            self.set_state('idle')
+            self.set_state('idle' if self.on_ground else 'jump')
         elif s == 'jump_attack' and self.t >= self.anims['jump_' + self.weapon].duration:
             self.set_state('jump')
-        elif s == 'fall' and self.t >= self.anims['fall'].duration:
+        elif s == 'fall' and self.on_ground and self.t >= self.anims['fall'].duration:
             self.set_state('down')
         elif s == 'down' and self.t >= 0.6:
             self.set_state('getup')
         elif s == 'getup' and self.t >= self.anims['getup'].duration:
             self.set_state('idle')
+            self.invincible = INVINCIBLE_TIME
 
     # ---------------- 그리기 ----------------
     def current_frame(self):
@@ -124,9 +200,9 @@ class Player:
             # 점프 프레임은 시간 대신 수직 속도로 고름: 1 도약, 2 상승, 3 정점, 4 하강
             if self.vy > JUMP_SPEED * 0.5:
                 f = 1
-            elif self.vy > 120:
+            elif self.vy > 180:
                 f = 2
-            elif self.vy > -120:
+            elif self.vy > -180:
                 f = 3
             else:
                 f = 4
@@ -143,7 +219,15 @@ class Player:
             a = self.anims[s]
         return a, a.frame_at(self.t)
 
-    def draw(self):
+    def draw(self, cam_y):
+        if self.invincible > 0 and int(self.invincible * 12) % 2:
+            return                                  # 무적 시간 동안 깜빡임
         anim, frame = self.current_frame()
-        cy = self.y + (CELL // 2 - FOOT_IN_CELL) * SCALE
+        cy = self.y + (CELL // 2 - FOOT_IN_CELL) * SCALE - cam_y
         anim.draw(frame, self.x, cy, self.facing)
+
+
+def approach(value, target, amount):
+    if value < target:
+        return min(value + amount, target)
+    return max(value - amount, target)

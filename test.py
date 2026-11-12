@@ -1,27 +1,50 @@
 from pico2d import *
 
-from config import WIDTH, HEIGHT, GROUND_Y
+from camera import Camera
+from config import WIDTH, HEIGHT, FULLSCREEN, TILE
+from laser import Laser
+from level_data import TEST_MAP
+from mine import Mine
 from player import Player
+from tilemap import TileMap
 
 # ---------------------------------------------------------------
-# 애니메이션 테스트
-#   ←→ : 이동          ↑ : 점프      Z : 공격
-#   TAB    : 무기 교체 (칼 <-> 총)       X : 넘어졌다 일어나기
-#   ESC    : 종료
+# 함정 테스트
+#   ←→ : 이동          ↑ : 점프 (짧게 누르면 낮은 점프)      Z : 공격
+#   TAB : 무기 교체 (칼 <-> 총)       X : 제자리 넘어지기
+#   R   : 시작 위치로 돌아가기        ESC : 종료
 # ---------------------------------------------------------------
+
+BACKGROUNDS = ['asset/bg_low.png', 'asset/bg_mid.png', 'asset/bg_high.png']
+STATE_NAMES = {'idle': '대기', 'walk': '이동', 'jump': '점프', 'land': '착지', 'attack': '공격',
+               'jump_attack': '점프 공격', 'fall': '넘어짐', 'down': '쓰러짐', 'getup': '일어남'}
+
+
+def draw_background(images, cam_y, map_height):
+    # 올라간 높이에 따라 아래/중간/위 배경으로 바뀜. 320px 이미지를 화면 너비에 맞춰 늘려 그림
+    progress = cam_y / max(1, map_height - HEIGHT)
+    img = images[min(len(images) - 1, int(progress * len(images)))]
+    img.draw(WIDTH / 2, HEIGHT / 2, WIDTH, WIDTH)
 
 
 def main():
-    open_canvas(WIDTH, HEIGHT)
+    open_canvas(WIDTH, HEIGHT, full=FULLSCREEN)
+    hide_cursor()
     try:
-        font = load_font('C:/Windows/Fonts/malgun.ttf', 18)
+        font = load_font('C:/Windows/Fonts/malgun.ttf', 24)
     except Exception:
         font = None
 
-    player = Player()
+    tilemap = TileMap(TEST_MAP)
+    backgrounds = [load_image(p) for p in BACKGROUNDS]
+    player = Player(*tilemap.start)
+    lasers = [Laser(tilemap, *info) for info in tilemap.lasers]
+    mines = [Mine(*pos) for pos in tilemap.mines]
+    camera = Camera(tilemap.height)
+    camera.snap(player.y)
+
     running = True
     last = get_time()
-
     while running:
         now = get_time()
         dt = min(now - last, 0.05)
@@ -30,21 +53,37 @@ def main():
         for e in get_events():
             if e.type == SDL_QUIT or (e.type == SDL_KEYDOWN and e.key == SDLK_ESCAPE):
                 running = False
+            elif e.type == SDL_KEYDOWN and e.key == SDLK_r:
+                player = Player(*tilemap.start)
+                camera.snap(player.y)
             else:
                 player.handle_event(e)
 
-        player.update(dt)
+        player.update(dt, tilemap)
+        for trap in lasers + mines:
+            trap.update(dt, player)
+        camera.update(dt, player.y)
 
         clear_canvas()
-        draw_rectangle(0, 0, WIDTH, HEIGHT, 255, 255, 255, 255, filled=True)   # 흰 배경
-        draw_rectangle(0, GROUND_Y - 2, WIDTH, GROUND_Y, 180, 180, 180, 255, filled=True)
-        player.draw()
+        cam = int(camera.y)
+        draw_background(backgrounds, cam, tilemap.height)
+        tilemap.draw(cam)
+        for trap in mines + lasers:
+            trap.draw(cam)
+        player.draw(cam)
+
         if font:
             weapon = '칼' if player.weapon == 'sword' else '총'
-            font.draw(10, HEIGHT - 20, f'무기: {weapon}   상태: {player.state}', (0, 0, 0))
-            font.draw(10, HEIGHT - 45, '←→ 이동 / ↑ 점프 / Z 공격 / TAB 무기교체 / X 넘어짐 / ESC 종료', (90, 90, 90))
+            height_m = (player.y - tilemap.start[1]) / TILE
+            info = f'무기: {weapon}   상태: {STATE_NAMES.get(player.state, player.state)}   높이: {height_m:.1f}칸'
+            if player.on_ice:
+                info += '   [얼음]'
+            if player.invincible > 0:
+                info += f'   [무적 {player.invincible:.1f}초]'
+            font.draw(70, HEIGHT - 30, info, (255, 255, 255))
+            font.draw(70, HEIGHT - 65, '←→ 이동 / ↑ 점프 / Z 공격 / TAB 무기교체 / X 넘어짐 / R 처음으로 / ESC 종료',
+                      (230, 230, 230))
         update_canvas()
-        delay(0.01)
 
     close_canvas()
 

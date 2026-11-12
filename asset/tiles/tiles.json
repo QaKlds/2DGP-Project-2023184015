@@ -1,0 +1,57 @@
+{
+  "tile": 32,
+  "cols": 8,
+  "sets": [
+    "tiles_wood",
+    "tiles_brick",
+    "tiles_frozen",
+    "tiles_gold"
+  ],
+  "layout": [
+    {
+      "row": 0,
+      "tiles": [
+        "top A",
+        "top B",
+        "top C",
+        "top left end",
+        "top right end",
+        "fill A",
+        "fill B",
+        "fill cracked"
+      ]
+    },
+    {
+      "row": 1,
+      "tiles": [
+        "wall A",
+        "wall B",
+        "wall left edge",
+        "wall right edge",
+        "underside",
+        "underside left",
+        "underside right",
+        "wall cracked"
+      ]
+    },
+    {
+      "row": 2,
+      "tiles": [
+        "floating left",
+        "floating middle A",
+        "floating middle B",
+        "floating right",
+        "floating single",
+        "moving platform left (glow 1)",
+        "moving platform right (glow 1)"
+      ]
+    },
+    {
+      "row": 3,
+      "tiles": [
+        "moving platform left (glow 2)",
+        "moving platform right (glow 2)"
+      ]
+    }
+  ]
+}
