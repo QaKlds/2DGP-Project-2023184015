@@ -30,8 +30,7 @@ class Mine:
         if self.state == 'armed':
             if player.on_ground and overlap(self.rect(), player.hitbox()):
                 self.state, self.t = 'explode', 0.0
-                push = 1 if player.x >= self.x else -1
-                player.hit(push, *MINE_KNOCK)
+                player.hit(*MINE_KNOCK)          # 보고 있는 방향 기준 뒤로 날아감
         elif self.state == 'explode' and self.t >= EXPLODE_FRAMES / EXPLODE_FPS:
             self.state, self.t = 'gone', 0.0
         elif self.state == 'gone' and self.t >= RESPAWN_TIME:
@@ -46,6 +45,6 @@ class Mine:
             frame = int(self.t * 2) % 2
         else:
             row, frame = ROW_EXPLODE, min(EXPLODE_FRAMES - 1, int(self.t * EXPLODE_FPS))
-        # 셀 안에서 지뢰 바닥이 중심보다 37px 아래에 있음
+        # 셀 안에서 지뢰 바닥이 중심보다 37px 아래에 있음 (+2px는 잔디 속에 살짝 묻히게)
         Mine.sheet.clip_draw(frame * CELL, Mine.sheet.h - (row + 1) * CELL, CELL, CELL,
-                             self.x, self.y + 37 * SCALE - cam_y, CELL * SCALE, CELL * SCALE)
+                             self.x, self.y + 39 * SCALE - cam_y, CELL * SCALE, CELL * SCALE)

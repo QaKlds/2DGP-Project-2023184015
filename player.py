@@ -49,12 +49,11 @@ class Player:
             return False
         return not (self.state == 'attack' and self.on_ground)
 
-    def hit(self, push_dir, knock_x, knock_y):
-        """함정에 맞음: push_dir 쪽으로 날아가며 뒤로 넘어짐"""
+    def hit(self, knock_x, knock_y):
+        """함정에 맞음: 보고 있는 방향 기준 뒤로 날아가며 넘어짐"""
         if self.invincible > 0 or self.state in KNOCKED:
             return
-        self.facing = -push_dir         # 밀려나는 반대쪽을 보며 뒤로 넘어짐
-        self.vx = push_dir * knock_x
+        self.vx = -self.facing * knock_x
         if knock_y > 0:
             self.vy = knock_y
             self.on_ground = False
@@ -83,7 +82,7 @@ class Player:
             elif e.key == SDLK_x:
                 # 테스트용: 제자리에서 뒤로 넘어지기
                 if self.on_ground and self.state in ('idle', 'walk', 'land'):
-                    self.hit(-self.facing, 0, 0)
+                    self.hit(0, 0)
         elif e.type == SDL_KEYUP:
             if e.key == SDLK_LEFT:
                 self.left = False
@@ -154,9 +153,15 @@ class Player:
                 self.vy = 0.0
 
     def check_ground(self, tilemap):
-        """발 바로 아래에 땅이 있는지, 얼음인지 확인"""
+        """발 바로 아래(1px 이내)에 땅이 있는지, 얼음인지 확인"""
         feet = (self.x - PLAYER_HALF_W + 1, self.y - 1, self.x + PLAYER_HALF_W - 1, self.y)
         under = tilemap.solids_in(*feet) if self.vy <= 0 else []
+        if under and not self.on_ground:
+            # 땅에 거의 닿은 채로 프레임이 끝난 경우에도 확실하게 착지 처리
+            self.y = max(rect[3] for rect, _ in under)
+            self.vy = 0.0
+            self.on_ground = True
+            self.on_landed()
         self.on_ground = bool(under)
         self.on_ice = any(ice for _, ice in under)
 

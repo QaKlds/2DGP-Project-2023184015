@@ -5,7 +5,7 @@ FULLSCREEN = True
 
 SCALE = 1.5           # 캐릭터/타일/함정을 그릴 배율 (원본 픽셀 x 1.5)
 CELL = 100            # 캐릭터·함정 스프라이트 한 칸 크기 (100x100)
-FOOT_IN_CELL = 12     # 캐릭터 셀 아래쪽에서 발까지의 거리(px, 원본 기준)
+FOOT_IN_CELL = 18     # 캐릭터 셀 아래쪽에서 발바닥까지 16px + 잔디 위쪽 투명한 부분 2px (원본 기준)
 
 TILE_SRC = 32                       # 타일 원본 크기
 TILE = int(TILE_SRC * SCALE)        # 화면에 그려지는 타일 크기 (48px)

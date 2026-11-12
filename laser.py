@@ -11,6 +11,8 @@ DIRS = {
     'down':  ('asset/트랩/laser_down.png', (0, -1)),
 }
 
+OPPOSITE = {'right': 'left', 'left': 'right', 'up': 'down', 'down': 'up'}
+
 # 상태별 시간(초)
 PERIODIC = {'idle': 1.5, 'charge': 0.5, 'fire': 1.0}
 DETECT = {'charge': 0.35, 'fire': 0.7, 'cooldown': 0.8}
@@ -20,7 +22,8 @@ BEAM_SRC = 32            # 빔 이미지 한 칸 크기
 
 
 class Laser:
-    """레이저 포탑. mode = 'periodic'(일정 주기 발사) / 'detect'(플레이어가 직선상에 있으면 발사)"""
+    """레이저 발사 장치 + 마주 보는 받는 장치 한 쌍.
+    mode = 'periodic'(일정 주기 발사) / 'detect'(플레이어가 직선상에 있으면 발사)"""
     images = {}          # 이미지는 처음 쓸 때 한 번만 불러서 모든 포탑이 공유
 
     @classmethod
@@ -39,7 +42,12 @@ class Laser:
         self.row_base = 0 if mode == 'periodic' else 3      # 시트 위 3줄: 주기형, 아래 3줄: 감지형
 
         self.cx, self.cy = (col + 0.5) * TILE, (row + 0.5) * TILE
-        self.cells = tilemap.ray_end(col, row, self.dc, self.db)
+        self.cells, end = tilemap.ray(col, row, self.dc, self.db)
+        # 빔이 끝나는 칸에 받는 장치(*)가 있으면 발사 장치를 마주 보게 그림
+        self.receiver = end if end in tilemap.receivers else None
+        self.receiver_sheet = Laser.image(DIRS[OPPOSITE[direction]][0])
+        if self.receiver is None:
+            print(f'[경고] ({col}, {row}) 레이저의 빔 끝에 받는 장치(*)가 없습니다')
         self.beam_rect = self._lane_rect(BEAM_THICK)
         self.sense_rect = self._lane_rect(TILE)               # 감지 범위는 한 칸 두께
 
@@ -75,11 +83,7 @@ class Laser:
                 self.set_state({'charge': 'fire', 'fire': 'cooldown', 'cooldown': 'idle'}[s])
 
         if self.state == 'fire' and self.beam_rect and overlap(self.beam_rect, player.hitbox()):
-            if self.dc:
-                push = self.dc                  # 가로 레이저: 빔 방향으로 밀려남
-            else:
-                push = -player.facing           # 세로 레이저: 보는 방향 기준 뒤로 넘어짐
-            player.hit(push, *LASER_KNOCK)
+            player.hit(*LASER_KNOCK)            # 보고 있는 방향 기준 뒤로 넘어짐
 
     # ---------------- 그리기 ----------------
     def draw(self, cam_y):
@@ -89,7 +93,7 @@ class Laser:
         elif self.state == 'charge':
             self._draw_beam(cam_y, int(self.t * 8) % 2, warn=True)
 
-        # 포탑 (셀 안에서 포탑이 중심보다 18px 아래에 그려져 있음)
+        # 발사 장치와 받는 장치는 같은 상태로 움직임
         if self.state == 'idle' or self.state == 'cooldown':
             r, f = 0, int(self.t * 3) % 2
         elif self.state == 'charge':
@@ -98,8 +102,15 @@ class Laser:
         else:
             r, f = 2, int(self.t * 15) % 3
         row = self.row_base + r
-        self.sheet.clip_draw(f * CELL, self.sheet.h - (row + 1) * CELL, CELL, CELL,
-                             self.cx, self.cy + 18 * SCALE - cam_y, CELL * SCALE, CELL * SCALE)
+        self._draw_device(self.sheet, row, f, self.cx, self.cy, cam_y)
+        if self.receiver:
+            rc, rb = self.receiver
+            self._draw_device(self.receiver_sheet, row, f, (rc + 0.5) * TILE, (rb + 0.5) * TILE, cam_y)
+
+    def _draw_device(self, sheet, row, frame, x, y, cam_y):
+        # 셀 안에서 장치가 중심보다 18px 아래에 그려져 있음
+        sheet.clip_draw(frame * CELL, sheet.h - (row + 1) * CELL, CELL, CELL,
+                        x, y + 18 * SCALE - cam_y, CELL * SCALE, CELL * SCALE)
 
     def _draw_beam(self, cam_y, frame, warn):
         horizontal = self.dc != 0
@@ -108,8 +119,8 @@ class Laser:
         for i, (c, b) in enumerate(self.cells):
             if warn:
                 src_row = 2 if horizontal else 1                 # 점선 조준선
-            elif horizontal and i == len(self.cells) - 1:
-                src_row = 1                                      # 벽에 닿는 끝부분
+            elif horizontal and i == len(self.cells) - 1 and not self.receiver:
+                src_row = 1                                      # 받는 장치 없이 벽에 닿는 끝부분
             else:
                 src_row = 0
             img.clip_composite_draw(frame * BEAM_SRC, img.h - (src_row + 1) * BEAM_SRC, BEAM_SRC, BEAM_SRC,

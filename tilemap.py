@@ -16,7 +16,8 @@ FLOAT_SOLID_H = int(20 * SCALE)     # 발판 그림은 타일 위쪽 20px만 차
 BLOCKS = '#I'          # 꽉 찬 블록
 FLOATS = '=~'          # 얇은 발판
 ICE = 'I~'             # 미끄러운 타일
-TURRET = 'T'           # 레이저 포탑 자리 (충돌만 하고 그림은 Laser가 그림)
+TURRET = 'T'           # 레이저 장치 자리 (충돌만 하고 그림은 Laser가 그림)
+RECEIVER = '*'         # 레이저 받는 장치
 LASER_CHARS = {
     'R': ('right', 'periodic'), 'L': ('left', 'periodic'),
     'U': ('up', 'periodic'),    'D': ('down', 'periodic'),
@@ -37,6 +38,7 @@ class TileMap:
         self.start = (TILE * 2, TILE * 2)
         self.mines = []        # (col, row)
         self.lasers = []       # (col, row, direction, mode)
+        self.receivers = set() # (col, row)
 
         # grid[row][col], row 0 = 맨 아래 줄
         self.grid = []
@@ -51,6 +53,9 @@ class TileMap:
                     ch = '.'
                 elif ch in LASER_CHARS:
                     self.lasers.append((c, b) + LASER_CHARS[ch])
+                    ch = TURRET
+                elif ch == RECEIVER:
+                    self.receivers.add((c, b))
                     ch = TURRET
                 out.append(ch)
             self.grid.append(out)
@@ -87,14 +92,14 @@ class TileMap:
                     out.append((rect, self.at(col, row) in ICE))
         return out
 
-    def ray_end(self, c, b, dc, db):
-        """(c, b) 다음 칸부터 (dc, db) 방향으로 막히기 직전 칸까지 진행. 레이저 길이 계산용"""
+    def ray(self, c, b, dc, db):
+        """(c, b) 다음 칸부터 (dc, db) 방향으로 진행. (지나간 빈 칸들, 막힌 칸) 반환. 레이저 길이 계산용"""
         cells = []
         c, b = c + dc, b + db
         while not self.is_solid(c, b):
             cells.append((c, b))
             c, b = c + dc, b + db
-        return cells
+        return cells, (c, b)
 
     # ---------------- 그리기 ----------------
     def _pick(self, c, b, ch):
