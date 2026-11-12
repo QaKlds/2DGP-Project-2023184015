@@ -1,0 +1,28 @@
+{
+  "frameSize": [
+    100,
+    100
+  ],
+  "rows": [
+    {
+      "row": 0,
+      "name": "get up",
+      "frames": 6
+    },
+    {
+      "row": 1,
+      "name": "fall from height",
+      "frames": 6
+    },
+    {
+      "row": 2,
+      "name": "sword in the air",
+      "frames": 7
+    },
+    {
+      "row": 3,
+      "name": "gun recoil in the air",
+      "frames": 6
+    }
+  ]
+}

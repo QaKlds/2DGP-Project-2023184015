@@ -87,11 +87,8 @@ class Laser:
 
     # ---------------- 그리기 ----------------
     def draw(self, cam_y):
-        frame_beam = int(self.t * 12) % 4
         if self.state == 'fire':
-            self._draw_beam(cam_y, frame_beam, warn=False)
-        elif self.state == 'charge':
-            self._draw_beam(cam_y, int(self.t * 8) % 2, warn=True)
+            self._draw_beam(cam_y, int(self.t * 12) % 4)
 
         # 발사 장치와 받는 장치는 같은 상태로 움직임
         if self.state == 'idle' or self.state == 'cooldown':
@@ -112,14 +109,12 @@ class Laser:
         sheet.clip_draw(frame * CELL, sheet.h - (row + 1) * CELL, CELL, CELL,
                         x, y + 18 * SCALE - cam_y, CELL * SCALE, CELL * SCALE)
 
-    def _draw_beam(self, cam_y, frame, warn):
+    def _draw_beam(self, cam_y, frame):
         horizontal = self.dc != 0
         img = self.beam_h if horizontal else self.beam_v
         flip = 'h' if self.direction == 'left' else ('v' if self.direction == 'up' else '')
         for i, (c, b) in enumerate(self.cells):
-            if warn:
-                src_row = 2 if horizontal else 1                 # 점선 조준선
-            elif horizontal and i == len(self.cells) - 1 and not self.receiver:
+            if horizontal and i == len(self.cells) - 1 and not self.receiver:
                 src_row = 1                                      # 받는 장치 없이 벽에 닿는 끝부분
             else:
                 src_row = 0

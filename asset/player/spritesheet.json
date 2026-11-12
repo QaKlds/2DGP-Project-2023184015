@@ -1,0 +1,62 @@
+{
+  "frameSize": [
+    100,
+    100
+  ],
+  "rows": [
+    {
+      "row": 0,
+      "name": "idle",
+      "file": "1_idle.png",
+      "frames": 4
+    },
+    {
+      "row": 1,
+      "name": "walk",
+      "file": "2_walk.png",
+      "frames": 6
+    },
+    {
+      "row": 2,
+      "name": "jump",
+      "file": "4_jump.png",
+      "frames": 6
+    },
+    {
+      "row": 3,
+      "name": "sword",
+      "file": "5_sword.png",
+      "frames": 8
+    },
+    {
+      "row": 4,
+      "name": "gun",
+      "file": "6_gun.png",
+      "frames": 7
+    },
+    {
+      "row": 5,
+      "name": "fall",
+      "file": "7_fall.png",
+      "frames": 6
+    },
+    {
+      "row": 6,
+      "name": "down blink",
+      "file": "8_down_blink.png",
+      "frames": 6
+    },
+    {
+      "row": 7,
+      "name": "get up",
+      "file": "9_get_up.png",
+      "frames": 6
+    },
+    {
+      "row": 8,
+      "name": "fall from height",
+      "file": "10_fall_height.png",
+      "frames": 6
+    }
+  ]
+}

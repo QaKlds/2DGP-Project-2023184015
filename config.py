@@ -29,3 +29,7 @@ ICE_FRICTION = 500            # 얼음 위에서 키를 뗐을 때 감속 (작�
 INVINCIBLE_TIME = 2.0         # 일어난 뒤 무적 시간 (초)
 MINE_KNOCK = (450, 800)       # 지뢰 폭발 시 (수평, 수직) 날아가는 속도
 LASER_KNOCK = (400, 450)      # 레이저 피격 시 (수평, 수직) 밀려나는 속도
+
+# 총 반동 (총을 쏘는 순간 보는 방향 뒤로 밀리면서 위로 살짝 뜸)
+GUN_RECOIL_UP = PLAYER_H / 2      # 위로 뜨는 높이: 캐릭터 키의 절반 (33px)
+GUN_RECOIL_BACK = PLAYER_H        # 뒤로 밀리는 거리: 캐릭터 키만큼 (66px)

@@ -4,10 +4,17 @@ from pico2d import (load_image, SDL_KEYDOWN, SDL_KEYUP,
 from anim import Anim
 from config import (CELL, SCALE, FOOT_IN_CELL, PLAYER_HALF_W, PLAYER_H,
                     MOVE_SPEED, JUMP_SPEED, JUMP_CUT_SPEED, GRAVITY, MAX_FALL_SPEED,
-                    ICE_ACCEL, ICE_FRICTION, INVINCIBLE_TIME)
+                    ICE_ACCEL, ICE_FRICTION, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK)
 
 KNOCKED = ('fall', 'down', 'getup')     # 넘어져서 조작할 수 없는 상태
 MAX_STEP = 0.008                        # 빠르게 떨어질 때 타일을 뚫지 않도록 나눠서 이동
+
+# 총 반동: 목표 높이까지 뜨는 속도와, 떴다 내려오는 시간 동안 목표 거리만큼 밀리는 속도
+RECOIL_VY = (2 * GRAVITY * GUN_RECOIL_UP) ** 0.5 + GRAVITY * MAX_STEP / 2   # 뒤쪽은 나눠서 계산할 때 생기는 오차 보정
+RECOIL_TIME = 2 * RECOIL_VY / GRAVITY
+RECOIL_VX = GUN_RECOIL_BACK / RECOIL_TIME
+# 총구에서 불꽃이 나오는 프레임 (이때 반동이 생김)
+GUN_FIRE_FRAME = {'gun': 3, 'jump_gun': 1}
 
 
 class Player:
@@ -33,19 +40,21 @@ class Player:
         self.on_ground = True
         self.on_ice = False
         self.invincible = 0.0
+        self.recoil = 0.0              # 총 반동으로 밀려나는 남은 시간
         self.set_state('idle')
 
     # ---------------- 상태 ----------------
     def set_state(self, state):
         self.state = state
         self.t = 0.0
+        self.fired = False             # 이번 공격에서 총을 이미 쐈는지
 
     def hitbox(self):
         return (self.x - PLAYER_HALF_W, self.y, self.x + PLAYER_HALF_W, self.y + PLAYER_H)
 
     def can_control(self):
         """좌우 입력을 받는 상태인지 (넘어짐 중, 땅에서 공격 중에는 X)"""
-        if self.state in KNOCKED:
+        if self.state in KNOCKED or self.recoil > 0:
             return False
         return not (self.state == 'attack' and self.on_ground)
 
@@ -53,6 +62,7 @@ class Player:
         """함정에 맞음: 보고 있는 방향 기준 뒤로 날아가며 넘어짐"""
         if self.invincible > 0 or self.state in KNOCKED:
             return
+        self.recoil = 0.0
         self.vx = -self.facing * knock_x
         if knock_y > 0:
             self.vy = knock_y
@@ -98,13 +108,16 @@ class Player:
         self.t += dt
         self.invincible = max(0.0, self.invincible - dt)
         direction = self.right - self.left
+        self.check_gun_fire()
         control = self.can_control()
 
         # 수평 속도
         target = direction * MOVE_SPEED if control else 0.0
         if control and direction != 0:
             self.facing = direction
-        if self.on_ground:
+        if self.recoil > 0:
+            pass                            # 반동 중에는 밀려나는 속도 유지
+        elif self.on_ground:
             if self.on_ice:
                 rate = ICE_ACCEL if target != 0 else ICE_FRICTION
                 self.vx = approach(self.vx, target, rate * dt)
@@ -120,11 +133,31 @@ class Player:
             remaining -= step
             if not self.on_ground:
                 self.vy = max(-MAX_FALL_SPEED, self.vy - GRAVITY * step)
-            self.move_x(self.vx * step, tilemap)
+            if self.recoil > 0 and self.recoil < step:
+                step_x = self.recoil                # 반동이 끝나는 순간까지만 밀림
+            else:
+                step_x = step
+            self.move_x(self.vx * step_x, tilemap)
             self.move_y(self.vy * step, tilemap)
+            if self.recoil > 0:
+                self.recoil -= step
+                if self.recoil <= 0 and not self.on_ice:
+                    self.vx = 0.0                   # 얼음 위가 아니면 반동 끝나면 멈춤
 
         self.check_ground(tilemap)
         self.update_state(direction)
+
+    def check_gun_fire(self):
+        """총 공격 애니메이션이 발사 프레임에 닿으면 반동을 줌"""
+        if self.weapon != 'gun' or self.fired or self.state not in ('attack', 'jump_attack'):
+            return
+        name = 'gun' if self.state == 'attack' else 'jump_gun'
+        if self.anims[name].frame_at(self.t) >= GUN_FIRE_FRAME[name]:
+            self.fired = True
+            self.recoil = RECOIL_TIME
+            self.vx = -self.facing * RECOIL_VX
+            self.vy = RECOIL_VY
+            self.on_ground = False
 
     def move_x(self, dx, tilemap):
         if dx == 0:
@@ -186,8 +219,8 @@ class Player:
                 self.set_state(want)
         elif s == 'land' and self.t >= 0.08:
             self.set_state('idle')
-        elif s == 'attack' and self.t >= self.anims[self.weapon].duration:
-            self.set_state('idle' if self.on_ground else 'jump')
+        elif s == 'attack' and self.on_ground and self.t >= self.anims[self.weapon].duration:
+            self.set_state('idle')      # 반동으로 떠 있으면 착지할 때까지 공격 마지막 자세 유지
         elif s == 'jump_attack' and self.t >= self.anims['jump_' + self.weapon].duration:
             self.set_state('jump')
         elif s == 'fall' and self.on_ground and self.t >= self.anims['fall'].duration:
