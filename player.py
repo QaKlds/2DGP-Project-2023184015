@@ -24,13 +24,14 @@ class Player:
         self.anims = {
             'idle':        Anim(main, 0, 4, 6),
             'walk':        Anim(main, 1, 6, 10),
-            'jump':        Anim(main, 2, 6, 10, loop=False),
+            # feet: 프레임별 발바닥 위치 (공중 동작만, 스프라이트를 바꾸면 다시 재야 함)
+            'jump':        Anim(main, 2, 6, 10, loop=False, feet=[83, 80, 57, 48, 66, 83]),
             'sword':       Anim(main, 3, 8, 20, loop=False),
             'gun':         Anim(main, 4, 7, 18, loop=False),
             'getup':       Anim(extra, 0, 6, 10, loop=False),
             'fall':        Anim(extra, 1, 6, 12, loop=False),
-            'jump_sword':  Anim(extra, 2, 7, 20, loop=False),
-            'jump_gun':    Anim(extra, 3, 6, 18, loop=False),
+            'jump_sword':  Anim(extra, 2, 7, 20, loop=False, feet=[65, 65, 65, 65, 68, 68, 65]),
+            'jump_gun':    Anim(extra, 3, 6, 18, loop=False, feet=[77, 74, 69, 65, 64, 66]),
         }
         self.x, self.y = x, y          # 발 중앙
         self.vx = self.vy = 0.0
