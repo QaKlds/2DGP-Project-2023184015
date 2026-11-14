@@ -17,7 +17,7 @@ from tilemap import TileMap
 
 BACKGROUNDS = ['asset/bg_low.png', 'asset/bg_mid.png', 'asset/bg_high.png']
 STATE_NAMES = {'idle': '대기', 'walk': '이동', 'jump': '점프', 'land': '착지', 'attack': '공격',
-               'jump_attack': '점프 공격', 'fall': '넘어짐', 'down': '쓰러짐', 'getup': '일어남'}
+               'jump_attack': '점프 공격', 'fall': '넘어짐', 'fall_height': '낙하 넘어짐', 'down': '쓰러짐', 'getup': '일어남'}
 
 
 def draw_background(images, cam_y, map_height):

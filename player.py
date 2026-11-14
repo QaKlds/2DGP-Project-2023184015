@@ -4,15 +4,21 @@ from pico2d import (load_image, SDL_KEYDOWN, SDL_KEYUP,
 from anim import Anim
 from config import (CELL, SCALE, FOOT_IN_CELL, PLAYER_HALF_W, PLAYER_H,
                     MOVE_SPEED, JUMP_SPEED, JUMP_CUT_SPEED, GRAVITY, MAX_FALL_SPEED,
-                    ICE_ACCEL, ICE_FRICTION, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK)
+                    ICE_ACCEL, ICE_FRICTION, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK,
+                    FALL_HEIGHT_SLIDE)
 
-KNOCKED = ('fall', 'down', 'getup')     # 넘어져서 조작할 수 없는 상태
+KNOCKED = ('fall', 'fall_height', 'down', 'getup')     # 넘어져서 조작할 수 없는 상태
 MAX_STEP = 0.008                        # 빠르게 떨어질 때 타일을 뚫지 않도록 나눠서 이동
 
 # 총 반동: 목표 높이까지 뜨는 속도와, 떴다 내려오는 시간 동안 목표 거리만큼 밀리는 속도
 RECOIL_VY = (2 * GRAVITY * GUN_RECOIL_UP) ** 0.5 + GRAVITY * MAX_STEP / 2   # 뒤쪽은 나눠서 계산할 때 생기는 오차 보정
 RECOIL_TIME = 2 * RECOIL_VY / GRAVITY
 RECOIL_VX = GUN_RECOIL_BACK / RECOIL_TIME
+# 넘어져 누우면 몸이 그림 속에서 뒤로 18px(원본) 가 있음. 그 자리에서 일어나도록
+# 누울 때 실제 x를 그만큼 뒤로 옮기고, 일어나는 동안 프레임별로 그림을 보정해서 몸이 제자리에 있게 함
+LIE_BACK = 18
+GETUP_BODY_SHIFT = [18, 16, 4, -1, -2, 0]   # 일어나기 프레임별 (서 있을 때 몸 위치 - 그 프레임 몸 위치), 원본 px
+
 # 총구에서 불꽃이 나오는 프레임 (이때 반동이 생김)
 GUN_FIRE_FRAME = {'gun': 3, 'jump_gun': 1}
 
@@ -30,6 +36,7 @@ class Player:
             'gun':         Anim(main, 4, 7, 18, loop=False),
             'getup':       Anim(extra, 0, 6, 10, loop=False),
             'fall':        Anim(extra, 1, 6, 12, loop=False),
+            'fall_height': Anim(main, 8, 6, 12, loop=False),     # 높은 곳에서 떨어져 착지하며 뒤로 넘어짐
             'jump_sword':  Anim(extra, 2, 7, 20, loop=False, feet=[65, 65, 65, 65, 68, 68, 65]),
             'jump_gun':    Anim(extra, 3, 6, 18, loop=False, feet=[77, 74, 69, 65, 64, 66]),
         }
@@ -41,6 +48,8 @@ class Player:
         self.on_ground = True
         self.on_ice = False
         self.invincible = 0.0
+        self.lie_ratio = 1.0           # 누울 때 뒤로 옮긴 비율 (벽에 막히면 1보다 작음)
+        self.slide_decel = 0.0         # 높은 곳에서 떨어져 넘어질 때 미끄러짐 감속
         self.recoil = 0.0              # 총 반동으로 밀려나는 남은 시간
         self.set_state('idle')
 
@@ -118,6 +127,8 @@ class Player:
             self.facing = direction
         if self.recoil > 0:
             pass                            # 반동 중에는 밀려나는 속도 유지
+        elif self.on_ground and self.state == 'fall_height':
+            pass                            # 넘어지며 미끄러지는 중 (아래 이동 계산에서 감속)
         elif self.on_ground:
             if self.on_ice:
                 rate = ICE_ACCEL if target != 0 else ICE_FRICTION
@@ -134,6 +145,8 @@ class Player:
             remaining -= step
             if not self.on_ground:
                 self.vy = max(-MAX_FALL_SPEED, self.vy - GRAVITY * step)
+            if self.on_ground and self.state == 'fall_height':
+                self.vx = approach(self.vx, 0.0, self.slide_decel * step)   # 넘어지며 미끄러지다 점점 멈춤
             if self.recoil > 0 and self.recoil < step:
                 step_x = self.recoil                # 반동이 끝나는 순간까지만 밀림
             else:
@@ -146,7 +159,7 @@ class Player:
                     self.vx = 0.0                   # 얼음 위가 아니면 반동 끝나면 멈춤
 
         self.check_ground(tilemap)
-        self.update_state(direction)
+        self.update_state(direction, tilemap)
 
     def check_gun_fire(self):
         """총 공격 애니메이션이 발사 프레임에 닿으면 반동을 줌"""
@@ -178,10 +191,11 @@ class Player:
         for (l, b, r, t), ice in tilemap.solids_in(*self.hitbox()):
             if dy < 0:
                 self.y = t
+                impact = self.vy
                 self.vy = 0.0
                 if not self.on_ground:
                     self.on_ground = True
-                    self.on_landed()
+                    self.on_landed(impact)
             else:
                 self.y = b - PLAYER_H
                 self.vy = 0.0
@@ -193,15 +207,26 @@ class Player:
         if under and not self.on_ground:
             # 땅에 거의 닿은 채로 프레임이 끝난 경우에도 확실하게 착지 처리
             self.y = max(rect[3] for rect, _ in under)
+            impact = self.vy
             self.vy = 0.0
             self.on_ground = True
-            self.on_landed()
+            self.on_landed(impact)
         self.on_ground = bool(under)
         self.on_ice = any(ice for _, ice in under)
 
-    def on_landed(self):
+    def on_landed(self, impact_vy):
+        """땅에 닿은 순간. impact_vy = 닿기 직전의 세로 속도(음수 = 아래로)"""
         s = self.state
-        if s == 'jump':
+        if impact_vy <= -MAX_FALL_SPEED and s not in ('fall_height', 'down', 'getup'):
+            # 최고 속도로 떨어지다 땅에 닿음: 무적·공격·함정에 맞아 날아가는 중이어도 뒤로 넘어짐
+            self.recoil = 0.0
+            self.set_state('fall_height')
+            # 넘어지는 애니메이션 동안 FALL_HEIGHT_SLIDE 만큼 뒤로 미끄러지다 멈추도록 (일정하게 감속)
+            duration = self.anims['fall_height'].duration
+            speed = 2 * FALL_HEIGHT_SLIDE / duration
+            self.slide_decel = speed / duration
+            self.vx = -self.facing * speed
+        elif s == 'jump':
             self.set_state('land')
         elif s == 'jump_attack':
             # 공중 공격 스프라이트는 그림 안에서 위로 떠 있으므로,
@@ -210,7 +235,7 @@ class Player:
             self.set_state('attack')
             self.t = progress * self.anims[self.weapon].duration
 
-    def update_state(self, direction):
+    def update_state(self, direction, tilemap):
         s = self.state
         if s in ('idle', 'walk', 'land') and not self.on_ground:
             self.set_state('jump')                       # 발판에서 걸어 나가 떨어짐
@@ -224,8 +249,9 @@ class Player:
             self.set_state('idle')      # 반동으로 떠 있으면 착지할 때까지 공격 마지막 자세 유지
         elif s == 'jump_attack' and self.t >= self.anims['jump_' + self.weapon].duration:
             self.set_state('jump')
-        elif s == 'fall' and self.on_ground and self.t >= self.anims['fall'].duration:
+        elif s in ('fall', 'fall_height') and self.on_ground and self.t >= self.anims[s].duration:
             self.set_state('down')
+            self.lie_down(tilemap)
         elif s == 'down' and self.t >= 0.6:
             self.set_state('getup')
         elif s == 'getup' and self.t >= self.anims['getup'].duration:
@@ -258,12 +284,30 @@ class Player:
             a = self.anims[s]
         return a, a.frame_at(self.t)
 
+    def lie_down(self, tilemap):
+        """누운 몸 위치로 실제 x를 옮김 (뒤에 벽이 있으면 벽까지만)"""
+        before = self.x
+        vx = self.vx
+        self.move_x(-self.facing * LIE_BACK * SCALE, tilemap)
+        self.vx = vx                     # 얼음 위에서 미끄러지던 속도는 유지
+        self.lie_ratio = abs(self.x - before) / (LIE_BACK * SCALE)
+
+    def body_shift(self, frame):
+        """누워 있거나 일어나는 동안 몸이 누운 자리에 있도록 그림을 옮길 거리 (px)"""
+        if self.state == 'down':
+            shift = GETUP_BODY_SHIFT[0]
+        elif self.state == 'getup':
+            shift = GETUP_BODY_SHIFT[frame]
+        else:
+            return 0
+        return self.facing * shift * SCALE * self.lie_ratio
+
     def draw(self, cam_y):
         if self.invincible > 0 and int(self.invincible * 12) % 2:
             return                                  # 무적 시간 동안 깜빡임
         anim, frame = self.current_frame()
         cy = self.y + (CELL // 2 - FOOT_IN_CELL) * SCALE - cam_y
-        anim.draw(frame, self.x, cy, self.facing)
+        anim.draw(frame, self.x + self.body_shift(frame), cy, self.facing)
 
 
 def approach(value, target, amount):

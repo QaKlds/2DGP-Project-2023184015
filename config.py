@@ -19,7 +19,7 @@ MOVE_SPEED = 300 * SCALE      # px/s
 JUMP_SPEED = 600 * SCALE      # px/s  (꾹 누를 때 최대 점프)
 JUMP_CUT_SPEED = 200 * SCALE  # px/s  (상승 중 키를 떼면 이 속도로 줄임 → 낮은 점프)
 GRAVITY = 2200 * SCALE        # px/s^2
-MAX_FALL_SPEED = 1500         # px/s
+MAX_FALL_SPEED = 1500         # px/s  떨어지는 최고 속도 (가만히 떨어지기 시작해서 약 340px, 7칸이면 도달)
 
 # 얼음
 ICE_ACCEL = 900               # 얼음 위에서 원하는 속도까지 붙는 가속도 (px/s^2)
@@ -27,6 +27,8 @@ ICE_FRICTION = 500            # 얼음 위에서 키를 뗐을 때 감속 (작�
 
 # 피격
 INVINCIBLE_TIME = 2.0         # 일어난 뒤 무적 시간 (초)
+FALL_HEIGHT_SLIDE = 54        # 높은 곳에서 떨어져 넘어질 때 뒤로 미끄러지는 거리 (px)
+                              # 누울 때 옮기는 27px와 합쳐 총 81px 밀림
 MINE_KNOCK = (450, 800)       # 지뢰 폭발 시 (수평, 수직) 날아가는 속도
 LASER_KNOCK = (400, 450)      # 레이저 피격 시 (수평, 수직) 밀려나는 속도
 
