@@ -45,6 +45,7 @@ class Mine:
             frame = int(self.t * 2) % 2
         else:
             row, frame = ROW_EXPLODE, min(EXPLODE_FRAMES - 1, int(self.t * EXPLODE_FPS))
-        # 셀 안에서 지뢰 바닥이 중심보다 37px 아래에 있음 (+2px는 잔디 속에 살짝 묻히게)
+        # 셀 안에서 지뢰 바닥이 중심보다 37px 아래에 있음.
+        # 2px 더 내려서 타일 위쪽 투명한 잔디 끝부분 속에 묻히게 (캐릭터 발과 같은 높이)
         Mine.sheet.clip_draw(frame * CELL, Mine.sheet.h - (row + 1) * CELL, CELL, CELL,
-                             self.x, self.y + 39 * SCALE - cam_y, CELL * SCALE, CELL * SCALE)
+                             self.x, self.y + (37 - 2) * SCALE - cam_y, CELL * SCALE, CELL * SCALE)
