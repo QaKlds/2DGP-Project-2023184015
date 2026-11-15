@@ -5,7 +5,7 @@ from anim import Anim
 from config import (CELL, SCALE, FOOT_IN_CELL, PLAYER_HALF_W, PLAYER_H,
                     MOVE_SPEED, JUMP_SPEED, JUMP_CUT_SPEED, GRAVITY, MAX_FALL_SPEED,
                     ICE_ACCEL, ICE_FRICTION, ICE_EDGE_SPEED, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK,
-                    FALL_HEIGHT_SLIDE, SLOPE_SPEED, SLOPE_ACCEL, SLOPE_AIR_DECEL, TILE)
+                    FALL_HEIGHT_SLIDE, SLOPE_SPEED, SLOPE_ACCEL, SLOPE_AIR_DECEL, KNOCK_BOUNCE_UP, KNOCK_SLIDE_DECEL, TILE)
 from tilemap import FLOOR_SLOPES
 
 KNOCKED = ('fall', 'fall_height', 'down', 'getup')     # 넘어져서 조작할 수 없는 상태
@@ -157,11 +157,12 @@ class Player:
         if control and direction != 0:
             self.facing = direction
         if self.on_slope:
-            self.facing = -self.on_slope    # 경사면에서는 미끄러지는 쪽을 봄 (속도는 아래 이동 계산에서)
+            if self.state not in KNOCKED:
+                self.facing = -self.on_slope    # 경사면에서는 미끄러지는 쪽을 봄 (누워서 미끄러질 때는 그대로)
         elif self.recoil > 0:
             pass                            # 반동 중에는 밀려나는 속도 유지
-        elif self.on_ground and self.state == 'fall_height':
-            pass                            # 넘어지며 미끄러지는 중 (아래 이동 계산에서 감속)
+        elif self.on_ground and self.state in ('fall_height', 'down'):
+            pass                            # 넘어지며/누운 채 미끄러지는 중 (아래 이동 계산에서 감속)
         elif self.on_ground:
             out = self.ice_edge(tilemap) if self.on_ice else 0
             if out:
@@ -191,6 +192,8 @@ class Player:
                 self.vx = approach(self.vx, -self.on_slope * SLOPE_SPEED, SLOPE_ACCEL * step)
             if self.on_ground and self.state == 'fall_height':
                 self.vx = approach(self.vx, 0.0, self.slide_decel * step)   # 넘어지며 미끄러지다 점점 멈춤
+            elif self.on_ground and self.state == 'down' and not self.on_slope:
+                self.vx = approach(self.vx, 0.0, KNOCK_SLIDE_DECEL * step)  # 누운 채 미끄러지다 점점 멈춤
             if self.recoil > 0 and self.recoil < step:
                 step_x = self.recoil                # 반동이 끝나는 순간까지만 밀림
             else:
@@ -261,7 +264,9 @@ class Player:
                 self.vy = 0.0
                 if not self.on_ground:
                     self.on_ground = True
-                    self.on_landed(impact)
+                    self.on_landed(impact, tilemap)
+                    if self.vy > 0:
+                        return              # 착지하자마자 튀어 오름 (같은 높이의 다른 블록에 다시 착지하지 않게)
             elif dy > 0 and prev_t <= b + 0.01:
                 self.y = b - PLAYER_H
                 self.vy = 0.0
@@ -313,13 +318,14 @@ class Player:
                 if depth:
                     self.y -= depth                 # 천장 경사면에 머리를 부딪힘
                     self.vy = 0.0
-            elif dy < 0 and ch in '[]' and prev_b >= top - 0.01:
+            elif dy < 0 and ch in '[]' and prev_b >= top - 0.01 and not tilemap.is_solid(c, b + 1):
+                # 윗면이 드러난 천장 경사 칸에만 착지 (위에 블록·경사면이 덮여 있으면 그쪽이 받아 줌)
                 self.y = top                        # 천장 경사 칸의 평평한 윗면에 착지
                 impact = self.vy
                 self.vy = 0.0
                 if not self.on_ground:
                     self.on_ground = True
-                    self.on_landed(impact)
+                    self.on_landed(impact, tilemap)
 
     def follow_slope(self, step, tilemap):
         """바닥 경사면에 닿으면 붙어서 미끄러지고, 경사면이 끝나면 미끄러지던 속도로 떨어짐"""
@@ -336,7 +342,10 @@ class Player:
                 self.vy = 0.0
                 self.on_ground = True
                 self.recoil = 0.0
-                self.set_state('slide')
+                if self.state in KNOCKED:
+                    self.lie_flat(tilemap, move=False)  # 넘어진 채로 닿으면 누운 채 미끄러짐 (경사면에서 벗어나지 않게 위치는 그대로)
+                else:
+                    self.set_state('slide')
             self.on_slope = up
         elif self.on_slope:
             up = self.on_slope
@@ -367,16 +376,21 @@ class Player:
             impact = self.vy
             self.vy = 0.0
             self.on_ground = True
-            self.on_landed(impact)
+            self.on_landed(impact, tilemap)
+            if self.vy > 0:                         # 착지하자마자 튀어 오름
+                self.on_ground = False
+                return
         if self.on_ground and not under and self.on_ice and self.vy <= 0 and self.vx != 0:
             self.slide_fly = True           # 얼음 위를 미끄러지다 끝에서 떨어짐: 미끄러지던 속도를 이어감
         self.on_ground = bool(under)
         self.on_ice = any(ice for _, ice in under)
 
-    def on_landed(self, impact_vy):
+    def on_landed(self, impact_vy, tilemap):
         """땅에 닿은 순간. impact_vy = 닿기 직전의 세로 속도(음수 = 아래로)"""
         s = self.state
-        if impact_vy <= -MAX_FALL_SPEED and s not in ('fall_height', 'down', 'getup'):
+        if impact_vy <= -MAX_FALL_SPEED and s in KNOCKED:
+            self.bounce_back(tilemap)                # 넘어진 채로 다시 높이 떨어짐: 누운 채 튀어 오르며 뒤로 밀림
+        elif impact_vy <= -MAX_FALL_SPEED:
             # 최고 속도로 떨어지다 땅에 닿음: 무적·공격·함정에 맞아 날아가는 중이어도 뒤로 넘어짐
             self.recoil = 0.0
             self.set_state('fall_height')
@@ -393,6 +407,30 @@ class Player:
             progress = self.t / self.anims['jump_' + self.weapon].duration
             self.set_state('attack')
             self.t = progress * self.anims[self.weapon].duration
+
+    def lie_flat(self, tilemap, move=True):
+        """누운 상태로 바꿈 (넘어지는 중이었으면 누운 몸 위치로 옮김)"""
+        if self.state in ('fall', 'fall_height'):
+            self.set_state('down')
+            if move:
+                self.lie_down(tilemap)
+        elif self.state == 'getup':
+            self.set_state('down')
+
+    def bounce_back(self, tilemap):
+        """넘어진 채로 최고 속도로 착지: 누운 자세로 KNOCK_BOUNCE_UP 만큼 튀어 오르며,
+        처음 넘어질 때와 같은 거리(미끄러짐 + 누울 때 옮기는 거리)를 뒤로 밀려남"""
+        self.lie_flat(tilemap)
+        self.set_state('down')
+        self.recoil = 0.0
+        self.vy = (2 * GRAVITY * KNOCK_BOUNCE_UP) ** 0.5
+        air = 2 * self.vy / GRAVITY                   # 튀어 올랐다 내려오는 시간
+        dist = FALL_HEIGHT_SLIDE + LIE_BACK * SCALE
+        a = KNOCK_SLIDE_DECEL
+        # 공중에서 v*air + 바닥에서 v^2/(2a) = dist 가 되는 속도
+        v = -a * air + ((a * air) ** 2 + 2 * a * dist) ** 0.5
+        self.vx = -self.facing * v
+        self.on_ground = False
 
     def update_state(self, direction, tilemap):
         s = self.state
@@ -414,9 +452,9 @@ class Player:
         elif s in ('fall', 'fall_height') and self.on_ground and self.t >= self.anims[s].duration:
             self.set_state('down')
             self.lie_down(tilemap)
-        elif s == 'down' and self.t >= 0.6:
-            self.set_state('getup')
-        elif s == 'getup' and self.t >= self.anims['getup'].duration:
+        elif s == 'down' and self.on_ground and not self.on_slope and abs(self.vx) < 1 and self.t >= 0.6:
+            self.set_state('getup')                      # 넘어진 채로 떨어지는 중이면 착지할 때까지 누운 자세 유지
+        elif s == 'getup' and self.on_ground and self.t >= self.anims['getup'].duration:
             self.set_state('idle')
             self.invincible = INVINCIBLE_TIME
 
@@ -468,8 +506,8 @@ class Player:
     def push_body_out(self, tilemap):
         """넘어진 몸(머리 포함)이 블록에 겹치면 겹친 만큼 반대쪽으로 밀어냄"""
         rect = self.body_rect()
-        if rect is None:
-            return
+        if rect is None or self.on_slope:
+            return              # 경사면 위에서는 누운 몸이 경사 밑 블록과 겹쳐 보여도 밀어내지 않음
         l, b, r, t = rect
         center = (l + r) / 2
         push_right = push_left = 0.0
