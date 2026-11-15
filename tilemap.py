@@ -184,6 +184,25 @@ class TileMap:
                 style = s
         return style
 
+    def zone_start(self, index):
+        """index번째 구간(0부터)의 첫 발판 위 발 위치 (x, y). 첫 구간은 시작 위치.
+        구간 시작 줄 이상에서 가장 낮은 평평한 땅(경사면 제외, 위 2칸이 빈 곳)의 가운데"""
+        if index == 0:
+            return self.start
+        first = self.zones[index][0]
+        for b in range(first, self.rows):
+            run = [c for c in range(self.cols)
+                   if self.at(c, b) in BLOCKS + FLOATS + HALF
+                   and not self.is_solid(c, b + 1) and not self.is_solid(c, b + 2)]
+            if run:
+                # 같은 줄에 발판이 여러 개면 맨 왼쪽 발판의 가운데
+                end = 0
+                while end + 1 < len(run) and run[end + 1] == run[end] + 1:
+                    end += 1
+                c = (run[0] + run[end]) / 2
+                return (c + 0.5) * TILE, (b + 1) * TILE
+        return self.start
+
     def style_at(self, c, b):
         """(c, b) 주변 8칸에 얼음이 있으면 'frozen', 아니면 그 줄의 구간 무늬 - 레이저 장치 무늬를 주변 땅에 맞추는 용도"""
         for dc in (-1, 0, 1):

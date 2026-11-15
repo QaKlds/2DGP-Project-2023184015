@@ -18,11 +18,13 @@ from tilemap import TileMap
 #   ←→ : 이동          ↑ : 점프 (짧게 누르면 낮은 점프)      Z : 공격
 #   TAB : 무기 교체 (칼 <-> 총)       X : 제자리 넘어지기
 #   R   : 시작 위치로 돌아가기        ESC : 종료
+#   1~4 : 각 구간(나무/벽돌/얼음/금) 첫 발판으로 순간이동 (테스트용)
 # ---------------------------------------------------------------
 
 BACKGROUNDS = ['asset/bg_low.png', 'asset/bg_mid.png', 'asset/bg_high.png']
 STATE_NAMES = {'idle': '대기', 'walk': '이동', 'jump': '점프', 'land': '착지', 'attack': '공격',
-               'jump_attack': '점프 공격', 'fall': '넘어짐', 'fall_height': '낙하 넘어짐', 'down': '쓰러짐', 'getup': '일어남'}
+               'jump_attack': '점프 공격', 'fall': '넘어짐', 'fall_height': '낙하 넘어짐', 'down': '쓰러짐', 'getup': '일어남', 'slide': '미끄러짐'}
+TELEPORT_KEYS = {SDLK_1: 0, SDLK_2: 1, SDLK_3: 2, SDLK_4: 3}     # 숫자 키 → 구간 번호
 
 
 def draw_background(images, cam_y, map_height):
@@ -63,6 +65,12 @@ def main():
                 running = False
             elif e.type == SDL_KEYDOWN and e.key == SDLK_r:
                 player = Player(*tilemap.start)
+                camera.snap(player.y)
+            elif e.type == SDL_KEYDOWN and e.key in TELEPORT_KEYS:
+                # 플레이어만 옮김 (함정·적은 그대로). 들고 있던 무기는 유지
+                weapon = player.weapon
+                player = Player(*tilemap.zone_start(TELEPORT_KEYS[e.key]))
+                player.weapon = weapon
                 camera.snap(player.y)
             else:
                 player.handle_event(e)
@@ -114,7 +122,7 @@ def main():
             if player.invincible > 0:
                 info += f'   [무적 {player.invincible:.1f}초]'
             font.draw(70, HEIGHT - 30, info, (255, 255, 255))
-            font.draw(70, HEIGHT - 65, '←→ 이동 / ↑ 점프 / Z 공격 / TAB 무기교체 / X 넘어짐 / R 처음으로 / ESC 종료',
+            font.draw(70, HEIGHT - 65, '←→ 이동 / ↑ 점프 / Z 공격 / TAB 무기교체 / X 넘어짐 / R 처음으로 / 1~4 구간 이동 / ESC 종료',
                       (230, 230, 230))
         update_canvas()
 
