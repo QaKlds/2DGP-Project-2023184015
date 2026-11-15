@@ -116,6 +116,14 @@ class TileMap:
                     out.append((rect, self.at(col, row) in ICE))
         return out
 
+    def style_at(self, c, b):
+        """(c, b) 주변 8칸에 얼음이 있으면 'frozen', 아니면 'brick' - 레이저 장치 무늬를 주변 땅에 맞추는 용도"""
+        for dc in (-1, 0, 1):
+            for db in (-1, 0, 1):
+                if self.at(c + dc, b + db) in ICE:
+                    return 'frozen'
+        return 'brick'
+
     def ray(self, c, b, dc, db):
         """(c, b) 다음 칸부터 (dc, db) 방향으로 진행. (지나간 빈 칸들, 막힌 칸) 반환. 레이저 길이 계산용"""
         cells = []
@@ -127,7 +135,8 @@ class TileMap:
 
     # ---------------- 그리기 ----------------
     def _pick(self, c, b, ch):
-        same = lambda cc, bb: self.at(cc, bb) == ch
+        # 블록 사이에 박힌 레이저 장치는 같은 블록으로 보고 이어지게 그림 (장치 주변에 끊긴 모서리가 안 생기게)
+        same = lambda cc, bb: self.at(cc, bb) == ch or (ch in BLOCKS and self.at(cc, bb) == TURRET)
         up, down, left, right = same(c, b + 1), same(c, b - 1), same(c - 1, b), same(c + 1, b)
         if ch in FLOATS:
             if not left and not right:

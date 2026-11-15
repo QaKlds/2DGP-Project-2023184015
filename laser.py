@@ -3,13 +3,13 @@ from pico2d import load_image
 from collision import overlap
 from config import CELL, SCALE, TILE, LASER_KNOCK
 
-# 방향별 (포탑 시트 파일, 한 칸 이동량)
-DIRS = {
-    'right': ('asset/트랩/traps_right.png', (1, 0)),
-    'left':  ('asset/트랩/traps_left.png', (-1, 0)),
-    'up':    ('asset/트랩/laser_up.png', (0, 1)),
-    'down':  ('asset/트랩/laser_down.png', (0, -1)),
-}
+# 방향별 한 칸 이동량
+DIRS = {'right': (1, 0), 'left': (-1, 0), 'up': (0, 1), 'down': (0, -1)}
+
+# 땅 속에 박히는 장치 그림: 무늬(주변 타일)별로 '오른쪽', '위쪽' 시트가 있고 왼쪽·아래쪽은 뒤집어서 씀
+DEVICE_SHEET = 'asset/트랩/laser_{style}_{base}.png'
+DEVICE_BASE = {'right': ('right', ''), 'left': ('right', 'h'), 'up': ('up', ''), 'down': ('up', 'v')}
+DEVICE_OFFSET = 18       # 시트 칸 안에서 장치가 칸 중심보다 18px(원본) 아래에 그려져 있음
 
 OPPOSITE = {'right': 'left', 'left': 'right', 'up': 'down', 'down': 'up'}
 
@@ -35,8 +35,8 @@ class Laser:
     def __init__(self, tilemap, col, row, direction, mode):
         self.col, self.row = col, row
         self.direction, self.mode = direction, mode
-        path, (self.dc, self.db) = DIRS[direction]
-        self.sheet = Laser.image(path)
+        self.dc, self.db = DIRS[direction]
+        self.device = self._device(direction, tilemap.style_at(col, row))
         self.beam_h = Laser.image('asset/트랩/laser_beam.png')
         self.beam_v = Laser.image('asset/트랩/laser_beam_vertical.png')
         self.row_base = 0 if mode == 'periodic' else 3      # 시트 위 3줄: 주기형, 아래 3줄: 감지형
@@ -45,8 +45,9 @@ class Laser:
         self.cells, end = tilemap.ray(col, row, self.dc, self.db)
         # 빔이 끝나는 칸에 받는 장치(*)가 있으면 발사 장치를 마주 보게 그림
         self.receiver = end if end in tilemap.receivers else None
-        self.receiver_sheet = Laser.image(DIRS[OPPOSITE[direction]][0])
-        if self.receiver is None:
+        if self.receiver:
+            self.receiver_device = self._device(OPPOSITE[direction], tilemap.style_at(*end))
+        else:
             print(f'[경고] ({col}, {row}) 레이저의 빔 끝에 받는 장치(*)가 없습니다')
         self.beam_rect = self._lane_rect(BEAM_THICK)
         self.sense_rect = self._lane_rect(TILE)               # 감지 범위는 한 칸 두께
@@ -99,15 +100,23 @@ class Laser:
         else:
             r, f = 2, int(self.t * 15) % 3
         row = self.row_base + r
-        self._draw_device(self.sheet, row, f, self.cx, self.cy, cam_y)
+        self._draw_device(self.device, row, f, self.cx, self.cy, cam_y)
         if self.receiver:
             rc, rb = self.receiver
-            self._draw_device(self.receiver_sheet, row, f, (rc + 0.5) * TILE, (rb + 0.5) * TILE, cam_y)
+            self._draw_device(self.receiver_device, row, f, (rc + 0.5) * TILE, (rb + 0.5) * TILE, cam_y)
 
-    def _draw_device(self, sheet, row, frame, x, y, cam_y):
-        # 셀 안에서 장치가 중심보다 18px 아래에 그려져 있음
-        sheet.clip_draw(frame * CELL, sheet.h - (row + 1) * CELL, CELL, CELL,
-                        x, y + 18 * SCALE - cam_y, CELL * SCALE, CELL * SCALE)
+    @staticmethod
+    def _device(direction, style):
+        """방향과 무늬에 맞는 (시트, 뒤집기) - 장치는 타일 한 칸을 꽉 채워서 땅 속에 박힌 것처럼 보임"""
+        base, flip = DEVICE_BASE[direction]
+        return Laser.image(DEVICE_SHEET.format(style=style, base=base)), flip
+
+    def _draw_device(self, device, row, frame, x, y, cam_y):
+        sheet, flip = device
+        # 장치가 칸 중심보다 아래에 있으므로 그만큼 올려 그림 (위아래로 뒤집으면 반대로)
+        offset = DEVICE_OFFSET * SCALE * (-1 if flip == 'v' else 1)
+        sheet.clip_composite_draw(frame * CELL, sheet.h - (row + 1) * CELL, CELL, CELL, 0, flip,
+                                  x, y + offset - cam_y, CELL * SCALE, CELL * SCALE)
 
     def _draw_beam(self, cam_y, frame):
         horizontal = self.dc != 0
