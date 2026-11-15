@@ -23,7 +23,8 @@ class Bullet:
             step = min(MAX_STEP, distance)
             distance -= step
             self.x += self.dir * step
-            if tilemap.solids_in(*self.rect()) or not (0 <= self.x <= tilemap.width):
+            if (tilemap.solids_in(*self.rect()) or tilemap.point_in_slope(self.x, self.y)
+                    or not (0 <= self.x <= tilemap.width)):
                 self.alive = False
                 return
             for enemy in enemies:

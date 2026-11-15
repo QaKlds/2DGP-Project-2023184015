@@ -23,6 +23,13 @@ TURRET = 'T'           # 레이저 장치 자리 (충돌만 하고 그림은 Las
 RECEIVER = '*'         # 레이저 받는 장치
 BAT_RANGE = ':'        # 박쥐가 날아다니는 범위 표시 (빈 칸 취급)
 WALL = '|'             # 보이지 않는 벽 (탑 돌기둥 안쪽 경계. 막히기만 하고 그리지 않음)
+# 45도 경사면 (asset/tiles/tiles_diag_*.png, 칸 번호 = 꽉 찬 모서리)
+#   /  바닥 경사: 오른쪽이 높음 (오른쪽 아래가 꽉 참)     \  바닥 경사: 왼쪽이 높음 (왼쪽 아래가 꽉 참)
+#   [  천장 경사: 오른쪽 아래가 비어 있음                  ]  천장 경사: 왼쪽 아래가 비어 있음
+FLOOR_SLOPES = {'/': 1, '\\': -1}       # 값 = 경사면이 올라가는 방향 (미끄러지는 방향은 반대)
+CEIL_SLOPES = '[]'
+SLOPES = '/\\[]'
+DIAG_INDEX = {'\\': 0, '/': 1, '[': 2, ']': 3}
 LASER_CHARS = {
     'R': ('right', 'periodic'), 'L': ('left', 'periodic'),
     'U': ('up', 'periodic'),    'D': ('down', 'periodic'),
@@ -86,6 +93,8 @@ class TileMap:
         self.zones = sorted(zones)
         self.sheets = {style: load_image(f'asset/tiles/tiles_{style}.png')
                        for style in ('wood', 'brick', 'frozen', 'gold')}
+        self.diag_sheets = {style: load_image(f'asset/tiles/tiles_diag_{style}.png')
+                            for style in ('wood', 'brick', 'frozen', 'gold')}
 
     # ---------------- 조회 ----------------
     def at(self, c, b):
@@ -97,9 +106,9 @@ class TileMap:
         return self.at(c, b) != '.'
 
     def tile_rect(self, c, b):
-        """타일의 충돌 사각형 (left, bottom, right, top) 또는 None"""
+        """타일의 충돌 사각형 (left, bottom, right, top) 또는 None. 경사면은 사각형이 아니라서 None"""
         ch = self.at(c, b)
-        if ch == '.':
+        if ch == '.' or ch in SLOPES:
             return None
         l, bt = c * TILE, b * TILE
         if ch in FLOATS:
@@ -118,6 +127,50 @@ class TileMap:
                 if rect and l < rect[2] and r > rect[0] and b < rect[3] and t > rect[1]:
                     out.append((rect, self.at(col, row) in ICE))
         return out
+
+    # ---------------- 경사면 ----------------
+    def slope_height(self, c, b, x):
+        """바닥 경사 칸 (c, b)에서 x 위치의 경사면 높이 (칸 밖의 x는 칸 끝으로 맞춤)"""
+        rel = min(max(x - c * TILE, 0), TILE)
+        if FLOOR_SLOPES[self.at(c, b)] > 0:
+            return b * TILE + rel
+        return b * TILE + TILE - rel
+
+    def floor_slope(self, x, y, below, above=0.0):
+        """x 위치에서 높이가 y-below ~ y+above 사이인 바닥 경사면 중 가장 높은 것: (높이, 올라가는 방향) 또는 None"""
+        c = int(x // TILE)
+        best = None
+        for b in range(int((y + above) // TILE), int((y - below) // TILE) - 1, -1):
+            if self.at(c, b) in FLOOR_SLOPES:
+                h = self.slope_height(c, b, x)
+                if y - below <= h <= y + above and (best is None or h > best[0]):
+                    best = (h, FLOOR_SLOPES[self.at(c, b)])
+        return best
+
+    def slopes_in(self, l, b, r, t):
+        """사각형과 겹치는 칸 중 경사면 칸들: [(c, row, 글자)]"""
+        out = []
+        for row in range(int(b // TILE), int(t // TILE) + 1):
+            for col in range(int(l // TILE), int(r // TILE) + 1):
+                ch = self.at(col, row)
+                if ch in SLOPES and l < (col + 1) * TILE and r > col * TILE and b < (row + 1) * TILE and t > row * TILE:
+                    out.append((col, row, ch))
+        return out
+
+    def point_in_slope(self, x, y):
+        """점 (x, y)가 경사면 칸의 꽉 찬 부분 안에 있는지 (총알용)"""
+        c, b = int(x // TILE), int(y // TILE)
+        ch = self.at(c, b)
+        if ch not in SLOPES:
+            return False
+        rx, ry = x - c * TILE, y - b * TILE
+        if ch == '/':
+            return ry < rx
+        if ch == '\\':
+            return ry < TILE - rx
+        if ch == '[':
+            return ry > rx
+        return rx + ry > TILE
 
     def is_surface(self, c, b):
         """(c, b) 바로 위 칸이 비어 있으면 땅 윗면 (잔디·눈이 덮인 타일이 보이는 자리)"""
@@ -151,7 +204,7 @@ class TileMap:
     # ---------------- 그리기 ----------------
     def _pick(self, c, b, ch):
         # 블록 사이에 박힌 레이저 장치는 같은 블록으로 보고 이어지게 그림 (장치 주변에 끊긴 모서리가 안 생기게)
-        same = lambda cc, bb: self.at(cc, bb) == ch or (ch in BLOCKS and self.at(cc, bb) == TURRET)
+        same = lambda cc, bb: self.at(cc, bb) == ch or (ch in BLOCKS and self.at(cc, bb) in TURRET + SLOPES)
         up, down, left, right = same(c, b + 1), same(c, b - 1), same(c - 1, b), same(c + 1, b)
         if ch in FLOATS:
             if not left and not right:
@@ -193,6 +246,10 @@ class TileMap:
                                   c * TILE + TILE / 2, sy, TILE, TILE)
                 elif ch == HALF:
                     self._draw_half(c * TILE + TILE / 2, sy, self.sheets[self.zone_at(b)])
+                elif ch in SLOPES:
+                    img = self.diag_sheets[self.style_at(c, b)]
+                    img.clip_draw(DIAG_INDEX[ch] * TILE_SRC, 0, TILE_SRC, TILE_SRC,
+                                  c * TILE + TILE / 2, sy, TILE, TILE)
 
     def _draw_half(self, cx, cy, img):
         """1칸 발판 그림의 양쪽 끝만 이어 붙여서 반 칸 발판으로 그림"""

@@ -36,6 +36,11 @@ MAX_FALL_SPEED = 1500         # px/s  떨어지는 최고 속도 (가만히 떨�
 ICE_ACCEL = 900               # 얼음 위에서 원하는 속도까지 붙는 가속도 (px/s^2)
 ICE_FRICTION = 500            # 얼음 위에서 키를 뗐을 때 감속 (작을수록 오래 미끄러짐)
 
+# 경사면 (밟으면 조작할 수 없고 아래쪽으로 미끄러짐)
+SLOPE_SPEED = MOVE_SPEED * 1.2    # 미끄러지는 최고 속도 (px/s)
+SLOPE_ACCEL = 2000                # 미끄러지는 속도가 붙는 가속도 (px/s^2)
+SLOPE_AIR_DECEL = 500             # 경사면 끝에서 날아갈 때 가로 속도가 줄어드는 감속도 (px/s^2, 작을수록 멀리 날아감)
+
 # 피격
 INVINCIBLE_TIME = 1.0         # 일어난 뒤 무적 시간 (초)
 FALL_HEIGHT_SLIDE = 54        # 높은 곳에서 떨어져 넘어질 때 뒤로 미끄러지는 거리 (px)
