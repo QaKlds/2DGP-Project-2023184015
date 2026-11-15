@@ -116,6 +116,10 @@ class TileMap:
                     out.append((rect, self.at(col, row) in ICE))
         return out
 
+    def is_surface(self, c, b):
+        """(c, b) 바로 위 칸이 비어 있으면 땅 윗면 (잔디·눈이 덮인 타일이 보이는 자리)"""
+        return not self.is_solid(c, b + 1)
+
     def style_at(self, c, b):
         """(c, b) 주변 8칸에 얼음이 있으면 'frozen', 아니면 'brick' - 레이저 장치 무늬를 주변 땅에 맞추는 용도"""
         for dc in (-1, 0, 1):

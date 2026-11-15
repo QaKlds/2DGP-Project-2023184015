@@ -1,3 +1,5 @@
+import os
+
 from pico2d import load_image
 
 from collision import overlap
@@ -9,6 +11,8 @@ DIRS = {'right': (1, 0), 'left': (-1, 0), 'up': (0, 1), 'down': (0, -1)}
 # 땅 속에 박히는 장치 그림: 무늬(주변 타일)별로 '오른쪽', '위쪽' 시트가 있고 왼쪽·아래쪽은 뒤집어서 씀
 DEVICE_SHEET = 'asset/트랩/laser_{style}_{base}.png'
 DEVICE_BASE = {'right': ('right', ''), 'left': ('right', 'h'), 'up': ('up', ''), 'down': ('up', 'v')}
+# 땅 윗면(위 칸이 비어 있음)에 박힌 장치는 잔디·눈이 덮인 그림을 씀. 없으면 반대 방향 그림을 뒤집어 쓰고, 그것도 없으면 위 그림
+TOP_SHEET = 'asset/트랩/laser_{style}_top_{direction}.png'
 DEVICE_OFFSET = 18       # 시트 칸 안에서 장치가 칸 중심보다 18px(원본) 아래에 그려져 있음
 
 OPPOSITE = {'right': 'left', 'left': 'right', 'up': 'down', 'down': 'up'}
@@ -36,7 +40,7 @@ class Laser:
         self.col, self.row = col, row
         self.direction, self.mode = direction, mode
         self.dc, self.db = DIRS[direction]
-        self.device = self._device(direction, tilemap.style_at(col, row))
+        self.device = self._device(direction, tilemap.style_at(col, row), tilemap.is_surface(col, row))
         self.beam_h = Laser.image('asset/트랩/laser_beam.png')
         self.beam_v = Laser.image('asset/트랩/laser_beam_vertical.png')
         self.row_base = 0 if mode == 'periodic' else 3      # 시트 위 3줄: 주기형, 아래 3줄: 감지형
@@ -46,7 +50,7 @@ class Laser:
         # 빔이 끝나는 칸에 받는 장치(*)가 있으면 발사 장치를 마주 보게 그림
         self.receiver = end if end in tilemap.receivers else None
         if self.receiver:
-            self.receiver_device = self._device(OPPOSITE[direction], tilemap.style_at(*end))
+            self.receiver_device = self._device(OPPOSITE[direction], tilemap.style_at(*end), tilemap.is_surface(*end))
         else:
             print(f'[경고] ({col}, {row}) 레이저의 빔 끝에 받는 장치(*)가 없습니다')
         self.beam_rect = self._lane_rect(BEAM_THICK)
@@ -106,8 +110,17 @@ class Laser:
             self._draw_device(self.receiver_device, row, f, (rc + 0.5) * TILE, (rb + 0.5) * TILE, cam_y)
 
     @staticmethod
-    def _device(direction, style):
-        """방향과 무늬에 맞는 (시트, 뒤집기) - 장치는 타일 한 칸을 꽉 채워서 땅 속에 박힌 것처럼 보임"""
+    def _device(direction, style, on_surface):
+        """방향·무늬·위치에 맞는 (시트, 뒤집기) - 장치는 타일 한 칸을 꽉 채워서 땅 속에 박힌 것처럼 보임"""
+        if on_surface:
+            path = TOP_SHEET.format(style=style, direction=direction)
+            if os.path.exists(path):
+                return Laser.image(path), ''
+            mirror = {'left': 'right', 'right': 'left'}.get(direction)
+            if mirror:
+                path = TOP_SHEET.format(style=style, direction=mirror)
+                if os.path.exists(path):
+                    return Laser.image(path), 'h'
         base, flip = DEVICE_BASE[direction]
         return Laser.image(DEVICE_SHEET.format(style=style, base=base)), flip
 

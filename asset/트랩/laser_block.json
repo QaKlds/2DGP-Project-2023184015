@@ -1,0 +1,54 @@
+{
+  "frameSize": [
+    100,
+    100
+  ],
+  "blockOrigin": [
+    34,
+    52
+  ],
+  "tile": 32,
+  "note": "the block is the zone's wall tile texture with the original panel, round lens and marking (stripes = periodic, eye = detect); right/left sheets shoot sideways, up/down sheets are the same frames turned a quarter turn",
+  "zones": [
+    "wood",
+    "brick",
+    "frozen",
+    "gold"
+  ],
+  "files": [
+    "laser_<zone>_right/left/up/down.png (flat, buried in the wall)",
+    "laser_<zone>_top_right/left/up/down.png (with the zone's grass / snow / moss / gold trim on top, for blocks on the surface)"
+  ],
+  "rows": [
+    {
+      "row": 0,
+      "name": "periodic idle",
+      "frames": 2
+    },
+    {
+      "row": 1,
+      "name": "periodic charge",
+      "frames": 4
+    },
+    {
+      "row": 2,
+      "name": "periodic fire",
+      "frames": 3
+    },
+    {
+      "row": 3,
+      "name": "detect idle",
+      "frames": 2
+    },
+    {
+      "row": 4,
+      "name": "detect charge",
+      "frames": 4
+    },
+    {
+      "row": 5,
+      "name": "detect fire",
+      "frames": 3
+    }
+  ]
+}
