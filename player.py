@@ -4,7 +4,7 @@ from pico2d import (load_image, SDL_KEYDOWN, SDL_KEYUP,
 from anim import Anim
 from config import (CELL, SCALE, FOOT_IN_CELL, PLAYER_HALF_W, PLAYER_H,
                     MOVE_SPEED, JUMP_SPEED, JUMP_CUT_SPEED, GRAVITY, MAX_FALL_SPEED,
-                    ICE_ACCEL, ICE_FRICTION, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK,
+                    ICE_ACCEL, ICE_FRICTION, ICE_EDGE_SPEED, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK,
                     FALL_HEIGHT_SLIDE, SLOPE_SPEED, SLOPE_ACCEL, SLOPE_AIR_DECEL, TILE)
 from tilemap import FLOOR_SLOPES
 
@@ -163,7 +163,12 @@ class Player:
         elif self.on_ground and self.state == 'fall_height':
             pass                            # 넘어지며 미끄러지는 중 (아래 이동 계산에서 감속)
         elif self.on_ground:
-            if self.on_ice:
+            out = self.ice_edge(tilemap) if self.on_ice else 0
+            if out:
+                # 얼음 끝에 걸쳐 있음: 발 중앙 밑이 비었으면 바깥쪽으로 계속 미끄러져 떨어짐 (조작 무시)
+                if self.vx * out < ICE_EDGE_SPEED:
+                    self.vx = approach(self.vx, out * ICE_EDGE_SPEED, ICE_ACCEL * dt)
+            elif self.on_ice:
                 rate = ICE_ACCEL if target != 0 else ICE_FRICTION
                 self.vx = approach(self.vx, target, rate * dt)
             else:
@@ -203,6 +208,14 @@ class Player:
             self.slope_fly = False
         self.update_state(direction, tilemap)
         self.push_body_out(tilemap)
+
+    def ice_edge(self, tilemap):
+        """얼음 끝에 몸 한쪽만 걸쳐 있으면 떨어지는 쪽 방향(1/-1), 아니면 0"""
+        if tilemap.solids_in(self.x - 1, self.y - 1, self.x + 1, self.y):
+            return 0                                   # 발 중앙 밑에 땅이 있음
+        if tilemap.solids_in(self.x - PLAYER_HALF_W + 1, self.y - 1, self.x - 1, self.y):
+            return 1                                   # 땅이 왼쪽에만 있음 → 오른쪽으로 떨어짐
+        return -1
 
     def check_gun_fire(self):
         """총 공격 애니메이션이 발사 프레임에 닿으면 반동을 줌"""
