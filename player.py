@@ -65,7 +65,7 @@ class Player:
         self.on_ground = True
         self.on_ice = False
         self.on_slope = 0              # 서 있는 경사면이 올라가는 방향 (1: 오른쪽이 높음, -1: 왼쪽이 높음, 0: 경사면 아님)
-        self.slope_fly = False         # 경사면 끝에서 미끄러지던 속도로 날아가는 중 (착지할 때까지 조작 불가)
+        self.slide_fly = False         # 경사면·얼음 끝에서 미끄러지던 속도로 날아가는 중 (착지할 때까지 조작 불가, 가로 속도가 천천히 줄어듦)
         self.invincible = 0.0
         self.slide_decel = 0.0         # 높은 곳에서 떨어져 넘어질 때 미끄러짐 감속
         self.recoil = 0.0              # 총 반동으로 밀려나는 남은 시간
@@ -93,7 +93,7 @@ class Player:
 
     def can_control(self):
         """좌우 입력을 받는 상태인지 (넘어짐 중, 땅에서 공격 중에는 X)"""
-        if self.state in KNOCKED or self.recoil > 0 or self.on_slope or self.slope_fly:
+        if self.state in KNOCKED or self.recoil > 0 or self.on_slope or self.slide_fly:
             return False
         return not (self.state == 'attack' and self.on_ground)
 
@@ -107,7 +107,7 @@ class Player:
             self.vy = knock_y
             self.on_ground = False
             self.on_slope = 0
-            self.slope_fly = False
+            self.slide_fly = False
         self.set_state('fall')
 
     # ---------------- 입력 ----------------
@@ -183,8 +183,8 @@ class Player:
             remaining -= step
             if not self.on_ground:
                 self.vy = max(-MAX_FALL_SPEED, self.vy - GRAVITY * step)
-            if self.slope_fly:
-                # 경사면에서 날아가는 중: 가로 속도가 천천히 줄어듦
+            if self.slide_fly:
+                # 경사면·얼음에서 미끄러지다 떨어지는 중: 가로 속도가 천천히 줄어듦
                 self.vx = approach(self.vx, 0.0, SLOPE_AIR_DECEL * step)
             if self.on_slope:
                 # 경사면 아래쪽으로 점점 빨라지며 미끄러짐
@@ -205,7 +205,7 @@ class Player:
 
         self.check_ground(tilemap)
         if self.on_ground:
-            self.slope_fly = False
+            self.slide_fly = False
         self.update_state(direction, tilemap)
         self.push_body_out(tilemap)
 
@@ -351,14 +351,15 @@ class Player:
                     self.x = min(self.x, (c + 1) * TILE - PLAYER_HALF_W - 0.01)
                 self.on_ground = False
                 self.vy = -abs(self.vx)             # 미끄러지던 속도 그대로 비스듬히 떨어짐
-                self.slope_fly = True
+                self.slide_fly = True
 
     def check_ground(self, tilemap):
         """발 바로 아래(1px 이내)에 땅이 있는지, 얼음인지 확인"""
         if self.on_slope:
             self.on_ground, self.on_ice = True, False
             return
-        feet = (self.x - PLAYER_HALF_W + 1, self.y - 1, self.x + PLAYER_HALF_W - 1, self.y)
+        # 발밑 확인 폭은 충돌 박스 폭과 똑같이 (다르면 블록 끝에 1px 걸쳤을 때 착지↔떨어짐을 반복하며 공중에 멈춤)
+        feet = (self.x - PLAYER_HALF_W, self.y - 1, self.x + PLAYER_HALF_W, self.y)
         under = tilemap.solids_in(*feet) if self.vy <= 0 else []
         if under and not self.on_ground:
             # 땅에 거의 닿은 채로 프레임이 끝난 경우에도 확실하게 착지 처리
@@ -367,6 +368,8 @@ class Player:
             self.vy = 0.0
             self.on_ground = True
             self.on_landed(impact)
+        if self.on_ground and not under and self.on_ice and self.vy <= 0 and self.vx != 0:
+            self.slide_fly = True           # 얼음 위를 미끄러지다 끝에서 떨어짐: 미끄러지던 속도를 이어감
         self.on_ground = bool(under)
         self.on_ice = any(ice for _, ice in under)
 
