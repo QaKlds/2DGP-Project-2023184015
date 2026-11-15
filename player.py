@@ -30,6 +30,12 @@ BODY_BOTTOM_ROW = 84                        # 몸 범위의 아래쪽 = 발바�
 
 # 총구에서 불꽃이 나오는 프레임 (이때 반동이 생김)
 GUN_FIRE_FRAME = {'gun': 3, 'jump_gun': 1}
+GUN_MUZZLE = (40, 46)          # 총알이 나오는 위치: 발 중앙에서 (앞으로, 위로) px (스프라이트 총구 위치)
+
+# 칼 공격이 적에게 닿는 프레임과 범위 (칼을 휘두르는 프레임만)
+SWORD_ACTIVE = {'sword': range(4, 7), 'jump_sword': range(4, 7)}
+SWORD_REACH = 75               # 몸 중앙에서 앞으로 닿는 거리 (px)
+SWORD_HEIGHT = 80              # 발에서 위로 닿는 높이 (px)
 
 
 class Player:
@@ -59,6 +65,7 @@ class Player:
         self.invincible = 0.0
         self.slide_decel = 0.0         # 높은 곳에서 떨어져 넘어질 때 미끄러짐 감속
         self.recoil = 0.0              # 총 반동으로 밀려나는 남은 시간
+        self.shots = []                # 이번에 쏜 총알 (x, y, 방향). 게임 루프가 가져가서 Bullet으로 만듦
         self.set_state('idle')
 
     # ---------------- 상태 ----------------
@@ -66,6 +73,16 @@ class Player:
         self.state = state
         self.t = 0.0
         self.fired = False             # 이번 공격에서 총을 이미 쐈는지
+
+    def sword_rect(self):
+        """칼을 휘두르는 프레임이면 칼이 닿는 범위, 아니면 None"""
+        if self.weapon != 'sword' or self.state not in ('attack', 'jump_attack'):
+            return None
+        name = 'sword' if self.state == 'attack' else 'jump_sword'
+        if self.anims[name].frame_at(self.t) not in SWORD_ACTIVE[name]:
+            return None
+        x1, x2 = self.x, self.x + self.facing * SWORD_REACH
+        return min(x1, x2), self.y, max(x1, x2), self.y + SWORD_HEIGHT
 
     def hitbox(self):
         return (self.x - PLAYER_HALF_W, self.y, self.x + PLAYER_HALF_W, self.y + PLAYER_H)
@@ -180,6 +197,8 @@ class Player:
             self.recoil = RECOIL_TIME
             self.vx = -self.facing * RECOIL_VX
             self.vy = RECOIL_VY
+            mx, my = GUN_MUZZLE
+            self.shots.append((self.x + self.facing * mx, self.y + my, self.facing))
             self.on_ground = False
 
     def move_x(self, dx, tilemap):

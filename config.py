@@ -35,3 +35,9 @@ LASER_KNOCK = (400, 450)      # 레이저 피격 시 (수평, 수직) 밀려나�
 # 총 반동 (총을 쏘는 순간 보는 방향 뒤로 밀리면서 위로 살짝 뜸)
 GUN_RECOIL_UP = PLAYER_H / 2      # 위로 뜨는 높이: 캐릭터 키의 절반 (33px)
 GUN_RECOIL_BACK = PLAYER_H        # 뒤로 밀리는 거리: 캐릭터 키만큼 (66px)
+BULLET_SPEED = 1500               # 총알 속도 (px/s). 블록이나 적에 닿으면 사라짐
+
+# 적
+ENEMY_SPEED = MOVE_SPEED / 2      # 고블린 좌우 / 박쥐 상하 이동 속도 (플레이어 걸음의 절반, 225px/s)
+ENEMY_RESPAWN_TIME = 5.0          # 죽은 뒤 다시 나타나기까지 (초)
+ENEMY_KNOCK = LASER_KNOCK         # 적에 닿았을 때 밀려나는 속도 (레이저와 같음)

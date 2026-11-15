@@ -1,7 +1,11 @@
 from pico2d import *
 
+from bat import Bat
+from bullet import Bullet
 from camera import Camera
+from collision import overlap
 from config import WIDTH, HEIGHT, FULLSCREEN, TILE
+from goblin import Goblin
 from laser import Laser
 from level_data import TEST_MAP
 from mine import Mine
@@ -9,7 +13,7 @@ from player import Player
 from tilemap import TileMap
 
 # ---------------------------------------------------------------
-# 함정 테스트
+# 함정 + 적 테스트
 #   ←→ : 이동          ↑ : 점프 (짧게 누르면 낮은 점프)      Z : 공격
 #   TAB : 무기 교체 (칼 <-> 총)       X : 제자리 넘어지기
 #   R   : 시작 위치로 돌아가기        ESC : 종료
@@ -40,6 +44,8 @@ def main():
     player = Player(*tilemap.start)
     lasers = [Laser(tilemap, *info) for info in tilemap.lasers]
     mines = [Mine(*pos) for pos in tilemap.mines]
+    enemies = [Goblin(*pos) for pos in tilemap.goblins] + [Bat(*info) for info in tilemap.bats]
+    bullets = []
     camera = Camera(tilemap.height)
     camera.snap(player.y)
 
@@ -62,6 +68,21 @@ def main():
         player.update(dt, tilemap)
         for trap in lasers + mines:
             trap.update(dt, player)
+        for enemy in enemies:
+            enemy.update(dt, tilemap, player)
+
+        # 칼: 휘두르는 프레임에 칼 범위에 닿은 적은 죽음
+        sword = player.sword_rect()
+        if sword:
+            for enemy in enemies:
+                if enemy.is_alive() and overlap(sword, enemy.hitbox()):
+                    enemy.kill()
+        # 총: 이번에 쏜 총알을 만들고, 날아가다 블록이나 적에 닿으면 사라짐
+        bullets += [Bullet(*shot) for shot in player.shots]
+        player.shots.clear()
+        for bullet in bullets:
+            bullet.update(dt, tilemap, enemies)
+        bullets = [b for b in bullets if b.alive]
         camera.update(dt, player.y)
 
         clear_canvas()
@@ -70,6 +91,10 @@ def main():
         tilemap.draw(cam)
         for trap in mines + lasers:
             trap.draw(cam)
+        for enemy in enemies:
+            enemy.draw(cam)
+        for bullet in bullets:
+            bullet.draw(cam)
         player.draw(cam)
 
         if font:

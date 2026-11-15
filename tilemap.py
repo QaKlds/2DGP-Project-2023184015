@@ -18,6 +18,7 @@ FLOATS = '=~'          # 얇은 발판
 ICE = 'I~'             # 미끄러운 타일
 TURRET = 'T'           # 레이저 장치 자리 (충돌만 하고 그림은 Laser가 그림)
 RECEIVER = '*'         # 레이저 받는 장치
+BAT_RANGE = ':'        # 박쥐가 날아다니는 범위 표시 (빈 칸 취급)
 LASER_CHARS = {
     'R': ('right', 'periodic'), 'L': ('left', 'periodic'),
     'U': ('up', 'periodic'),    'D': ('down', 'periodic'),
@@ -39,10 +40,13 @@ class TileMap:
         self.mines = []        # (col, row)
         self.lasers = []       # (col, row, direction, mode)
         self.receivers = set() # (col, row)
+        self.goblins = []      # (col, row)
+        self.bats = []         # (col, row, 범위 아래 줄, 범위 위 줄)
 
         # grid[row][col], row 0 = 맨 아래 줄
+        lines = list(reversed(rows))
         self.grid = []
-        for b, line in enumerate(reversed(rows)):
+        for b, line in enumerate(lines):
             out = []
             for c, ch in enumerate(line):
                 if ch == 'P':
@@ -50,6 +54,20 @@ class TileMap:
                     ch = '.'
                 elif ch == 'M':
                     self.mines.append((c, b))
+                    ch = '.'
+                elif ch == 'G':
+                    self.goblins.append((c, b))
+                    ch = '.'
+                elif ch == 'B':
+                    # B 위아래로 이어진 ':' 칸까지가 박쥐가 날아다니는 범위
+                    low = high = b
+                    while low - 1 >= 0 and lines[low - 1][c] == BAT_RANGE:
+                        low -= 1
+                    while high + 1 < len(lines) and lines[high + 1][c] == BAT_RANGE:
+                        high += 1
+                    self.bats.append((c, b, low, high))
+                    ch = '.'
+                elif ch == BAT_RANGE:
                     ch = '.'
                 elif ch in LASER_CHARS:
                     self.lasers.append((c, b) + LASER_CHARS[ch])
