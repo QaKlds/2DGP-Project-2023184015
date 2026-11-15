@@ -19,6 +19,15 @@ RECOIL_VX = GUN_RECOIL_BACK / RECOIL_TIME
 LIE_BACK = 18
 GETUP_BODY_SHIFT = [18, 16, 4, -1, -2, 0]   # 일어나기 프레임별 (서 있을 때 몸 위치 - 그 프레임 몸 위치), 원본 px
 
+# 넘어진 동작 프레임별로 실제 그려지는 몸의 범위 (왼쪽, 오른쪽, 위) - 셀 기준 원본 px, 오른쪽을 볼 때
+# 누운 몸은 서 있는 충돌 박스보다 훨씬 넓어서, 이 범위가 블록과 겹치지 않게 캐릭터를 밀어냄
+BODY_BOX = {
+    'fall_height': [(51, 77, 47), (33, 74, 46), (18, 67, 50), (11, 58, 56), (8, 54, 65), (7, 53, 67)],
+    'fall':        [(39, 63, 47), (33, 66, 41), (17, 63, 41), (9, 55, 62), (8, 54, 65), (7, 53, 67)],
+    'getup':       [(7, 53, 67), (9, 55, 53), (28, 61, 47), (35, 63, 46), (38, 62, 42), (37, 60, 38)],
+}
+BODY_BOTTOM_ROW = 84                        # 몸 범위의 아래쪽 = 발바닥 줄
+
 # 총구에서 불꽃이 나오는 프레임 (이때 반동이 생김)
 GUN_FIRE_FRAME = {'gun': 3, 'jump_gun': 1}
 
@@ -48,7 +57,6 @@ class Player:
         self.on_ground = True
         self.on_ice = False
         self.invincible = 0.0
-        self.lie_ratio = 1.0           # 누울 때 뒤로 옮긴 비율 (벽에 막히면 1보다 작음)
         self.slide_decel = 0.0         # 높은 곳에서 떨어져 넘어질 때 미끄러짐 감속
         self.recoil = 0.0              # 총 반동으로 밀려나는 남은 시간
         self.set_state('idle')
@@ -160,6 +168,7 @@ class Player:
 
         self.check_ground(tilemap)
         self.update_state(direction, tilemap)
+        self.push_body_out(tilemap)
 
     def check_gun_fire(self):
         """총 공격 애니메이션이 발사 프레임에 닿으면 반동을 줌"""
@@ -285,12 +294,42 @@ class Player:
         return a, a.frame_at(self.t)
 
     def lie_down(self, tilemap):
-        """누운 몸 위치로 실제 x를 옮김 (뒤에 벽이 있으면 벽까지만)"""
-        before = self.x
-        vx = self.vx
-        self.move_x(-self.facing * LIE_BACK * SCALE, tilemap)
-        self.vx = vx                     # 얼음 위에서 미끄러지던 속도는 유지
-        self.lie_ratio = abs(self.x - before) / (LIE_BACK * SCALE)
+        """누운 몸 위치로 실제 x를 옮김. 뒤에 벽이 있으면 push_body_out이 몸이 벽에 안 겹치게 밀어냄"""
+        self.x -= self.facing * LIE_BACK * SCALE
+        self.push_body_out(tilemap)
+
+    def body_rect(self):
+        """넘어진 동작 중 실제로 그려지는 몸의 범위 (left, bottom, right, top) 또는 None"""
+        anim, frame = self.current_frame()
+        name = 'getup' if self.state == 'down' else self.state
+        if name not in BODY_BOX:
+            return None
+        l, r, top = BODY_BOX[name][frame]
+        draw_x = self.x + self.body_shift(frame)
+        x1 = draw_x + (l - CELL / 2) * SCALE * self.facing
+        x2 = draw_x + (r - CELL / 2) * SCALE * self.facing
+        # 위쪽은 서 있는 충돌 박스 높이까지만 (일어날 때 머리가 3px 더 높아서 낮은 천장에 걸리지 않게)
+        height = min((BODY_BOTTOM_ROW - top) * SCALE, PLAYER_H)
+        return min(x1, x2), self.y + 1, max(x1, x2), self.y + height
+
+    def push_body_out(self, tilemap):
+        """넘어진 몸(머리 포함)이 블록에 겹치면 겹친 만큼 반대쪽으로 밀어냄"""
+        rect = self.body_rect()
+        if rect is None:
+            return
+        l, b, r, t = rect
+        center = (l + r) / 2
+        push_right = push_left = 0.0
+        for (sl, sb, sr, st), _ in tilemap.solids_in(l, b, r, t):
+            if (sl + sr) / 2 < center:
+                push_right = max(push_right, sr - l)       # 블록이 왼쪽에 있음 → 오른쪽으로
+            else:
+                push_left = max(push_left, r - sl)         # 블록이 오른쪽에 있음 → 왼쪽으로
+        push = push_right - push_left
+        if push:
+            self.x += push
+            if self.vx * push < 0:
+                self.vx = 0.0                              # 벽 쪽으로 미끄러지던 속도는 멈춤
 
     def body_shift(self, frame):
         """누워 있거나 일어나는 동안 몸이 누운 자리에 있도록 그림을 옮길 거리 (px)"""
@@ -300,7 +339,7 @@ class Player:
             shift = GETUP_BODY_SHIFT[frame]
         else:
             return 0
-        return self.facing * shift * SCALE * self.lie_ratio
+        return self.facing * shift * SCALE
 
     def draw(self, cam_y):
         if self.invincible > 0 and int(self.invincible * 12) % 2:
