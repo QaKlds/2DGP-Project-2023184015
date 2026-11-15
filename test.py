@@ -66,8 +66,10 @@ def main():
                 player.handle_event(e)
 
         player.update(dt, tilemap)
-        for trap in lasers + mines:
-            trap.update(dt, player)
+        for laser in lasers:
+            laser.update(dt, player)
+        for mine in mines:
+            mine.update(dt, player, camera.y)
         for enemy in enemies:
             enemy.update(dt, tilemap, player)
 
@@ -77,11 +79,14 @@ def main():
             for enemy in enemies:
                 if enemy.is_alive() and overlap(sword, enemy.hitbox()):
                     enemy.kill()
+            for mine in mines:
+                if mine.is_armed() and overlap(sword, mine.rect()):
+                    mine.defuse()                   # 칼로 벤 지뢰는 터지지만 피해 없음
         # 총: 이번에 쏜 총알을 만들고, 날아가다 블록이나 적에 닿으면 사라짐
         bullets += [Bullet(*shot) for shot in player.shots]
         player.shots.clear()
         for bullet in bullets:
-            bullet.update(dt, tilemap, enemies)
+            bullet.update(dt, tilemap, enemies, mines)
         bullets = [b for b in bullets if b.alive]
         camera.update(dt, player.y)
 

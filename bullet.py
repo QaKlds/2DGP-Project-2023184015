@@ -8,7 +8,7 @@ MAX_STEP = 8                     # 한 번에 움직이는 최대 거리 (적을
 
 
 class Bullet:
-    """총알: 앞으로 날아가다 블록이나 적에 닿으면 사라짐. 적은 한 방에 죽음"""
+    """총알: 앞으로 날아가다 블록이나 적·지뢰에 닿으면 사라짐. 적은 한 방에 죽고 지뢰는 없어짐"""
     def __init__(self, x, y, direction):
         self.x, self.y = x, y
         self.dir = direction
@@ -17,7 +17,7 @@ class Bullet:
     def rect(self):
         return self.x - HALF_LEN, self.y - HALF_THICK, self.x + HALF_LEN, self.y + HALF_THICK
 
-    def update(self, dt, tilemap, enemies):
+    def update(self, dt, tilemap, enemies, mines=()):
         distance = BULLET_SPEED * dt
         while distance > 0 and self.alive:
             step = min(MAX_STEP, distance)
@@ -29,6 +29,11 @@ class Bullet:
             for enemy in enemies:
                 if enemy.is_alive() and overlap(self.rect(), enemy.hitbox()):
                     enemy.kill()
+                    self.alive = False
+                    return
+            for mine in mines:
+                if mine.is_armed() and overlap(self.rect(), mine.rect()):
+                    mine.defuse()
                     self.alive = False
                     return
 
