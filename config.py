@@ -10,6 +10,17 @@ FOOT_IN_CELL = 18     # 캐릭터 셀 아래쪽에서 발바닥까지 16px + 잔
 TILE_SRC = 32                       # 타일 원본 크기
 TILE = int(TILE_SRC * SCALE)        # 화면에 그려지는 타일 크기 (48px)
 
+# 탑: 320px 조각을 5배(1600px)로 그려서 화면 가운데에 세우고, 플레이어는 탑 안쪽 28칸에서만 움직임
+TOWER_DIR = 'asset/tower/tower_re'
+TOWER_SCALE = 5
+TOWER_PIECE = 320                   # 탑 조각 원본 크기 (양옆 기둥 24px + 안쪽 272px)
+TOWER_PILLAR = 24                   # 기둥 원본 폭
+TOWER_INNER_COL = 6                 # 탑 안쪽이 시작하는 맵 칸 (6~33칸이 안쪽 28칸)
+TOWER_INNER_COLS = 28               # 안쪽 칸 수 (안쪽 1360px 중 1344px, 남는 8px씩은 기둥 옆 여백)
+# 아래부터 쌓는 탑 조각 (테스트용으로 짧게: 맨 아래 → 구간 연결 조각들 → 꼭대기)
+TOWER_PIECES = ['tower_bottom', 'tower_trans_wood_brick', 'tower_trans_brick_frozen',
+                'tower_trans_frozen_gold', 'tower_top']
+
 # 플레이어 충돌 박스 (발 중앙 기준)
 PLAYER_HALF_W = 15
 PLAYER_H = 66

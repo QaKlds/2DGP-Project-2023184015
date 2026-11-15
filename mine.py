@@ -3,7 +3,7 @@ from pico2d import load_image
 from collision import overlap
 from config import CELL, SCALE, TILE, HEIGHT, MINE_KNOCK
 
-SHEET = 'asset/트랩/traps_right.png'
+SHEET = 'asset/trap/traps_right.png'
 ROW_IDLE, ROW_BLINK, ROW_EXPLODE = 7, 8, 9
 EXPLODE_FRAMES, EXPLODE_FPS = 8, 14
 RESPAWN_TIME = 3.0           # 밟아서 터진 뒤 다시 생기기까지 (테스트용)

@@ -1,0 +1,18 @@
+{
+  "size": [
+    320,
+    320
+  ],
+  "note": "half-scale layout: wall bricks 16x8, pillars 24 px wide, two 160 px cells (window, banner, torches, slits) per piece",
+  "stackFromBottomToTop": [
+    "tower_bottom",
+    "tower_wood (repeat)",
+    "tower_trans_wood_brick",
+    "tower_brick (repeat)",
+    "tower_trans_brick_frozen",
+    "tower_frozen (repeat)",
+    "tower_trans_frozen_gold",
+    "tower_gold (repeat)",
+    "tower_top"
+  ]
+}

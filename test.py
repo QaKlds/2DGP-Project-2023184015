@@ -7,8 +7,9 @@ from collision import overlap
 from config import WIDTH, HEIGHT, FULLSCREEN, TILE
 from goblin import Goblin
 from laser import Laser
-from level_data import TEST_MAP
+from level_data import TEST_MAP, TEST_ZONES
 from mine import Mine
+from tower import Tower
 from player import Player
 from tilemap import TileMap
 
@@ -39,8 +40,9 @@ def main():
     except Exception:
         font = None
 
-    tilemap = TileMap(TEST_MAP)
+    tilemap = TileMap(TEST_MAP, TEST_ZONES)
     backgrounds = [load_image(p) for p in BACKGROUNDS]
+    tower = Tower()
     player = Player(*tilemap.start)
     lasers = [Laser(tilemap, *info) for info in tilemap.lasers]
     mines = [Mine(*pos) for pos in tilemap.mines]
@@ -93,6 +95,7 @@ def main():
         clear_canvas()
         cam = int(camera.y)
         draw_background(backgrounds, cam, tilemap.height)
+        tower.draw(cam)
         tilemap.draw(cam)
         for trap in mines + lasers:
             trap.draw(cam)

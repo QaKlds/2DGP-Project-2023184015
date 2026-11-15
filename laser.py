@@ -9,10 +9,10 @@ from config import CELL, SCALE, TILE, LASER_KNOCK
 DIRS = {'right': (1, 0), 'left': (-1, 0), 'up': (0, 1), 'down': (0, -1)}
 
 # 땅 속에 박히는 장치 그림: 무늬(주변 타일)별로 '오른쪽', '위쪽' 시트가 있고 왼쪽·아래쪽은 뒤집어서 씀
-DEVICE_SHEET = 'asset/트랩/laser_{style}_{base}.png'
+DEVICE_SHEET = 'asset/trap/laser_{style}_{base}.png'
 DEVICE_BASE = {'right': ('right', ''), 'left': ('right', 'h'), 'up': ('up', ''), 'down': ('up', 'v')}
 # 땅 윗면(위 칸이 비어 있음)에 박힌 장치는 잔디·눈이 덮인 그림을 씀. 없으면 반대 방향 그림을 뒤집어 쓰고, 그것도 없으면 위 그림
-TOP_SHEET = 'asset/트랩/laser_{style}_top_{direction}.png'
+TOP_SHEET = 'asset/trap/laser_{style}_top_{direction}.png'
 DEVICE_OFFSET = 18       # 시트 칸 안에서 장치가 칸 중심보다 18px(원본) 아래에 그려져 있음
 
 OPPOSITE = {'right': 'left', 'left': 'right', 'up': 'down', 'down': 'up'}
@@ -41,8 +41,8 @@ class Laser:
         self.direction, self.mode = direction, mode
         self.dc, self.db = DIRS[direction]
         self.device = self._device(direction, tilemap.style_at(col, row), tilemap.is_surface(col, row))
-        self.beam_h = Laser.image('asset/트랩/laser_beam.png')
-        self.beam_v = Laser.image('asset/트랩/laser_beam_vertical.png')
+        self.beam_h = Laser.image('asset/trap/laser_beam.png')
+        self.beam_v = Laser.image('asset/trap/laser_beam_vertical.png')
         self.row_base = 0 if mode == 'periodic' else 3      # 시트 위 3줄: 주기형, 아래 3줄: 감지형
 
         self.cx, self.cy = (col + 0.5) * TILE, (row + 0.5) * TILE

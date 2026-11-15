@@ -1,0 +1,29 @@
+{
+  "tile": 32,
+  "cols": 4,
+  "note": "45 degree slopes, no cover on top; the solid corner is named",
+  "tiles": [
+    {
+      "index": 0,
+      "solid": "bottom-left"
+    },
+    {
+      "index": 1,
+      "solid": "bottom-right"
+    },
+    {
+      "index": 2,
+      "solid": "top-left"
+    },
+    {
+      "index": 3,
+      "solid": "top-right"
+    }
+  ],
+  "sets": [
+    "tiles_diag_wood",
+    "tiles_diag_brick",
+    "tiles_diag_frozen",
+    "tiles_diag_gold"
+  ]
+}

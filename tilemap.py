@@ -22,6 +22,7 @@ ICE = 'I~'             # 미끄러운 타일
 TURRET = 'T'           # 레이저 장치 자리 (충돌만 하고 그림은 Laser가 그림)
 RECEIVER = '*'         # 레이저 받는 장치
 BAT_RANGE = ':'        # 박쥐가 날아다니는 범위 표시 (빈 칸 취급)
+WALL = '|'             # 보이지 않는 벽 (탑 돌기둥 안쪽 경계. 막히기만 하고 그리지 않음)
 LASER_CHARS = {
     'R': ('right', 'periodic'), 'L': ('left', 'periodic'),
     'U': ('up', 'periodic'),    'D': ('down', 'periodic'),
@@ -32,7 +33,7 @@ LASER_CHARS = {
 
 class TileMap:
     """글자 맵을 읽어서 타일을 그리고, 충돌 정보를 제공"""
-    def __init__(self, rows):
+    def __init__(self, rows, zones=((0, 'brick'),)):
         width = len(rows[0])
         for i, row in enumerate(rows):
             assert len(row) == width, f'맵 {i}번째 줄 길이가 다릅니다 ({len(row)} != {width})'
@@ -81,8 +82,10 @@ class TileMap:
                 out.append(ch)
             self.grid.append(out)
 
-        self.brick = load_image('asset/tiles/tiles_brick.png')
-        self.frozen = load_image('asset/tiles/tiles_frozen.png')
+        # 구간별 타일 무늬: zones = [(시작 줄, 무늬), ...]  무늬 = wood / brick / frozen / gold
+        self.zones = sorted(zones)
+        self.sheets = {style: load_image(f'asset/tiles/tiles_{style}.png')
+                       for style in ('wood', 'brick', 'frozen', 'gold')}
 
     # ---------------- 조회 ----------------
     def at(self, c, b):
@@ -120,13 +123,21 @@ class TileMap:
         """(c, b) 바로 위 칸이 비어 있으면 땅 윗면 (잔디·눈이 덮인 타일이 보이는 자리)"""
         return not self.is_solid(c, b + 1)
 
+    def zone_at(self, b):
+        """b줄이 속한 탑 구간의 무늬"""
+        style = self.zones[0][1]
+        for start, s in self.zones:
+            if b >= start:
+                style = s
+        return style
+
     def style_at(self, c, b):
-        """(c, b) 주변 8칸에 얼음이 있으면 'frozen', 아니면 'brick' - 레이저 장치 무늬를 주변 땅에 맞추는 용도"""
+        """(c, b) 주변 8칸에 얼음이 있으면 'frozen', 아니면 그 줄의 구간 무늬 - 레이저 장치 무늬를 주변 땅에 맞추는 용도"""
         for dc in (-1, 0, 1):
             for db in (-1, 0, 1):
                 if self.at(c + dc, b + db) in ICE:
                     return 'frozen'
-        return 'brick'
+        return self.zone_at(b)
 
     def ray(self, c, b, dc, db):
         """(c, b) 다음 칸부터 (dc, db) 방향으로 진행. (지나간 빈 칸들, 막힌 칸) 반환. 레이저 길이 계산용"""
@@ -177,16 +188,15 @@ class TileMap:
                 ch = self.grid[b][c]
                 if ch in BLOCKS or ch in FLOATS:
                     col, row = self._pick(c, b, ch)
-                    img = self.frozen if ch in ICE else self.brick
+                    img = self.sheets['frozen' if ch in ICE else self.zone_at(b)]
                     img.clip_draw(col * TILE_SRC, img.h - (row + 1) * TILE_SRC, TILE_SRC, TILE_SRC,
                                   c * TILE + TILE / 2, sy, TILE, TILE)
                 elif ch == HALF:
-                    self._draw_half(c * TILE + TILE / 2, sy)
+                    self._draw_half(c * TILE + TILE / 2, sy, self.sheets[self.zone_at(b)])
 
-    def _draw_half(self, cx, cy):
+    def _draw_half(self, cx, cy, img):
         """1칸 발판 그림의 양쪽 끝만 이어 붙여서 반 칸 발판으로 그림"""
         col, row = FLOAT_SINGLE
-        img = self.brick
         bottom = img.h - (row + 1) * TILE_SRC
         part = HALF_SRC_END * SCALE                     # 화면에서 한쪽 조각 폭 (12px)
         img.clip_draw(col * TILE_SRC, bottom, HALF_SRC_END, TILE_SRC,
