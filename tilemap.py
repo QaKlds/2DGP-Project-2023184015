@@ -15,6 +15,9 @@ FLOAT_SOLID_H = int(20 * SCALE)     # 발판 그림은 타일 위쪽 20px만 차
 
 BLOCKS = '#I'          # 꽉 찬 블록
 FLOATS = '=~'          # 얇은 발판
+HALF = '-'             # 반 칸 발판 (칸 가운데 24px만 있음)
+HALF_SRC_END = 8       # 반 칸 발판 그림: 1칸 발판 그림의 왼쪽 끝 8px + 오른쪽 끝 8px을 이어 붙임
+HALF_W = HALF_SRC_END * 2 * SCALE      # 화면에서 반 칸 발판 폭 (24px)
 ICE = 'I~'             # 미끄러운 타일
 TURRET = 'T'           # 레이저 장치 자리 (충돌만 하고 그림은 Laser가 그림)
 RECEIVER = '*'         # 레이저 받는 장치
@@ -98,6 +101,9 @@ class TileMap:
         l, bt = c * TILE, b * TILE
         if ch in FLOATS:
             return l, bt + TILE - FLOAT_SOLID_H, l + TILE, bt + TILE
+        if ch == HALF:
+            hl = l + (TILE - HALF_W) / 2
+            return hl, bt + TILE - FLOAT_SOLID_H, hl + HALF_W, bt + TILE
         return l, bt, l + TILE, bt + TILE
 
     def solids_in(self, l, b, r, t):
@@ -161,3 +167,16 @@ class TileMap:
                     img = self.frozen if ch in ICE else self.brick
                     img.clip_draw(col * TILE_SRC, img.h - (row + 1) * TILE_SRC, TILE_SRC, TILE_SRC,
                                   c * TILE + TILE / 2, sy, TILE, TILE)
+                elif ch == HALF:
+                    self._draw_half(c * TILE + TILE / 2, sy)
+
+    def _draw_half(self, cx, cy):
+        """1칸 발판 그림의 양쪽 끝만 이어 붙여서 반 칸 발판으로 그림"""
+        col, row = FLOAT_SINGLE
+        img = self.brick
+        bottom = img.h - (row + 1) * TILE_SRC
+        part = HALF_SRC_END * SCALE                     # 화면에서 한쪽 조각 폭 (12px)
+        img.clip_draw(col * TILE_SRC, bottom, HALF_SRC_END, TILE_SRC,
+                      cx - part / 2, cy, part, TILE)
+        img.clip_draw(col * TILE_SRC + TILE_SRC - HALF_SRC_END, bottom, HALF_SRC_END, TILE_SRC,
+                      cx + part / 2, cy, part, TILE)
