@@ -43,11 +43,11 @@ SLOPE_ACCEL = 2000                # 미끄러지는 속도가 붙는 가속도 (
 SLOPE_AIR_DECEL = 500             # 경사면·얼음 끝에서 미끄러져 떨어질 때 가로 속도가 줄어드는 감속도 (px/s^2, 작을수록 멀리 날아감)
 
 # 피격
-INVINCIBLE_TIME = 1.0         # 일어난 뒤 무적 시간 (초)
 FALL_HEIGHT_SLIDE = 54        # 높은 곳에서 떨어져 넘어질 때 뒤로 미끄러지는 거리 (px)
                               # 누울 때 옮기는 27px와 합쳐 총 81px 밀림
 KNOCK_BOUNCE_UP = 24          # 넘어진 채로 다시 높이 떨어지면 누운 채 튀어 오르는 높이 (px, 반 칸)
 KNOCK_SLIDE_DECEL = 1200      # 누운 채 바닥에서 미끄러질 때 감속 (px/s^2)
+INVINCIBLE_TIME = 1.0         # 함정·적에 맞은 순간부터 다시 안 맞는 시간 (초)
 MINE_KNOCK = (450, 800)       # 지뢰 폭발 시 (수평, 수직) 날아가는 속도
 LASER_KNOCK = (400, 450)      # 레이저 피격 시 (수평, 수직) 밀려나는 속도
 
@@ -60,3 +60,4 @@ BULLET_SPEED = 1500               # 총알 속도 (px/s). 블록이나 적에 �
 ENEMY_SPEED = MOVE_SPEED / 2      # 고블린 좌우 / 박쥐 상하 이동 속도 (플레이어 걸음의 절반, 225px/s)
 ENEMY_RESPAWN_TIME = 5.0          # 죽은 뒤 다시 나타나기까지 (초)
 ENEMY_KNOCK = LASER_KNOCK         # 적에 닿았을 때 밀려나는 속도 (레이저와 같음)
+ENEMY_HIT_INTERVAL = 0.5          # 적에 계속 닿아 있으면 이 간격(초)마다 다시 맞음

@@ -57,6 +57,7 @@ class Laser:
         self.sense_rect = self._lane_rect(TILE)               # 감지 범위는 한 칸 두께
 
         self.state = 'idle'
+        self.touching = False                                 # 지난 프레임에 빔이 플레이어에 닿아 있었는지
         # 주기형 포탑끼리 박자가 겹치지 않게 시작 시간을 조금씩 어긋나게
         self.t = (col * 0.37 + row * 0.23) % PERIODIC['idle'] if mode == 'periodic' else 0.0
 
@@ -87,8 +88,12 @@ class Laser:
             elif s in DETECT and self.t >= DETECT[s]:
                 self.set_state({'charge': 'fire', 'fire': 'cooldown', 'cooldown': 'idle'}[s])
 
-        if self.state == 'fire' and self.beam_rect and overlap(self.beam_rect, player.hitbox()):
-            player.hit(*LASER_KNOCK)            # 보고 있는 방향 기준 뒤로 넘어짐
+        touching = self.state == 'fire' and self.beam_rect and overlap(self.beam_rect, player.hitbox())
+        if touching and not self.touching:
+            # 빔에 새로 닿을 때만 맞음 (빔 속에 계속 있으면 다시 안 밀림).
+            # 넘어진 중이면 가로 빔은 발사 장치 반대쪽, 세로 빔은 빔 줄기 반대쪽으로 다시 밀려남
+            player.hit(*LASER_KNOCK, source_x=self.cx)
+        self.touching = bool(touching)
 
     # ---------------- 그리기 ----------------
     def draw(self, cam_y):

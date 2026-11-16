@@ -1,7 +1,7 @@
 from pico2d import load_image
 
 from collision import overlap
-from config import CELL, SCALE, ENEMY_RESPAWN_TIME, ENEMY_KNOCK
+from config import CELL, SCALE, ENEMY_RESPAWN_TIME, ENEMY_KNOCK, ENEMY_HIT_INTERVAL
 
 SHEET = 'asset/enemy/monsters_right.png'   # 원본은 오른쪽을 보고 있음
 MOVE_FPS, DIE_FPS, RESPAWN_FPS = 10, 12, 10
@@ -21,6 +21,7 @@ class Enemy:
 
     def reset(self):
         """처음 자리로 되돌림 (리스폰할 때도 사용)"""
+        self.hit_wait = 0.0        # 플레이어를 다시 때릴 수 있을 때까지 남은 시간
         self.x, self.y = self.spawn_x, self.spawn_y
         self.facing = 1
         self.state, self.t = 'alive', 0.0
@@ -49,8 +50,11 @@ class Enemy:
         self.t += dt
         if self.state == 'alive':
             self.move(dt, tilemap)
-            if overlap(self.hitbox(), player.hitbox()):
-                player.hit(*ENEMY_KNOCK)          # 보고 있는 방향 기준 뒤로 넘어짐 (무적이면 무시됨)
+            self.hit_wait = max(0.0, self.hit_wait - dt)
+            if self.hit_wait == 0 and overlap(self.hitbox(), player.hitbox()):
+                # 닿으면 맞고, 계속 닿아 있으면 ENEMY_HIT_INTERVAL 마다 다시 맞음. 넘어진 중이면 적 반대쪽으로 다시 밀려남
+                player.hit(*ENEMY_KNOCK, source_x=self.x)
+                self.hit_wait = ENEMY_HIT_INTERVAL
             return
 
         self.dead_time += dt

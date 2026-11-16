@@ -43,7 +43,7 @@ class Mine:
         if self.state == 'armed':
             if player.on_ground and overlap(self.rect(), player.hitbox()):
                 self.state, self.t = 'explode', 0.0
-                player.hit(*MINE_KNOCK)          # 보고 있는 방향 기준 뒤로 날아감
+                player.hit(*MINE_KNOCK, source_x=self.x)   # 보고 있는 방향 기준 뒤로 (넘어진 중이면 지뢰 반대쪽으로) 날아감
         elif self.state == 'explode' and self.t >= EXPLODE_FRAMES / EXPLODE_FPS:
             self.state, self.t = 'gone', 0.0
         elif self.state == 'gone' and self.t >= RESPAWN_TIME:

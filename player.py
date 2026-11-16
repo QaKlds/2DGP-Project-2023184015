@@ -10,6 +10,7 @@ from tilemap import FLOOR_SLOPES
 
 KNOCKED = ('fall', 'fall_height', 'down', 'getup')     # 넘어져서 조작할 수 없는 상태
 MAX_STEP = 0.008                        # 빠르게 떨어질 때 타일을 뚫지 않도록 나눠서 이동
+BLINK_RATE = 12                         # 무적일 때 1초에 깜빡이는 횟수 x2 (켜짐/꺼짐)
 SLOPE_DEPTH = 16                        # 발 중앙이 경사면 속으로 이만큼(px)까지 파고들면 위로 올려 줌 (더 깊으면 옆면에 막힘)
 
 # 총 반동: 목표 높이까지 뜨는 속도와, 떴다 내려오는 시간 동안 목표 거리만큼 밀리는 속도
@@ -65,8 +66,8 @@ class Player:
         self.on_ground = True
         self.on_ice = False
         self.on_slope = 0              # 서 있는 경사면이 올라가는 방향 (1: 오른쪽이 높음, -1: 왼쪽이 높음, 0: 경사면 아님)
+        self.invincible = 0.0          # 남은 무적 시간 (맞은 순간부터 INVINCIBLE_TIME 동안 다시 안 맞음)
         self.slide_fly = False         # 경사면·얼음 끝에서 미끄러지던 속도로 날아가는 중 (착지할 때까지 조작 불가, 가로 속도가 천천히 줄어듦)
-        self.invincible = 0.0
         self.slide_decel = 0.0         # 높은 곳에서 떨어져 넘어질 때 미끄러짐 감속
         self.recoil = 0.0              # 총 반동으로 밀려나는 남은 시간
         self.shots = []                # 이번에 쏜 총알 (x, y, 방향). 게임 루프가 가져가서 Bullet으로 만듦
@@ -97,18 +98,30 @@ class Player:
             return False
         return not (self.state == 'attack' and self.on_ground)
 
-    def hit(self, knock_x, knock_y):
-        """함정에 맞음: 보고 있는 방향 기준 뒤로 날아가며 넘어짐"""
-        if self.invincible > 0 or self.state in KNOCKED:
+    def hit(self, knock_x, knock_y, source_x=None):
+        """함정·적에 맞음: 보고 있는 방향 기준 뒤로 날아가며 넘어짐.
+        이미 넘어진 중에 또 맞으면 때린 쪽(source_x) 반대로 다시 날아감"""
+        knocked = self.state in KNOCKED
+        if self.invincible > 0 or (knocked and source_x is None):
             return
+        self.invincible = INVINCIBLE_TIME
         self.recoil = 0.0
-        self.vx = -self.facing * knock_x
+        if knocked:
+            away = 1 if self.x > source_x else -1 if self.x < source_x else -self.facing
+            self.vx = away * knock_x
+            if self.state in ('down', 'getup'):
+                self.set_state('down')          # 누워 있거나 일어나는 중이면 누운 자세 그대로 날아감
+            else:
+                self.set_state('fall')          # 넘어지는 중이면 넘어지는 동작을 처음부터
+        else:
+            self.vx = -self.facing * knock_x
         if knock_y > 0:
             self.vy = knock_y
             self.on_ground = False
             self.on_slope = 0
             self.slide_fly = False
-        self.set_state('fall')
+        if not knocked:
+            self.set_state('fall')
 
     # ---------------- 입력 ----------------
     def handle_event(self, e):
@@ -391,7 +404,7 @@ class Player:
         if impact_vy <= -MAX_FALL_SPEED and s in KNOCKED:
             self.bounce_back(tilemap)                # 넘어진 채로 다시 높이 떨어짐: 누운 채 튀어 오르며 뒤로 밀림
         elif impact_vy <= -MAX_FALL_SPEED:
-            # 최고 속도로 떨어지다 땅에 닿음: 무적·공격·함정에 맞아 날아가는 중이어도 뒤로 넘어짐
+            # 최고 속도로 떨어지다 땅에 닿음: 공격·함정에 맞아 날아가는 중이어도 뒤로 넘어짐
             self.recoil = 0.0
             self.set_state('fall_height')
             # 넘어지는 애니메이션 동안 FALL_HEIGHT_SLIDE 만큼 뒤로 미끄러지다 멈추도록 (일정하게 감속)
@@ -456,7 +469,6 @@ class Player:
             self.set_state('getup')                      # 넘어진 채로 떨어지는 중이면 착지할 때까지 누운 자세 유지
         elif s == 'getup' and self.on_ground and self.t >= self.anims['getup'].duration:
             self.set_state('idle')
-            self.invincible = INVINCIBLE_TIME
 
     # ---------------- 그리기 ----------------
     def current_frame(self):
@@ -533,7 +545,7 @@ class Player:
         return self.facing * shift * SCALE
 
     def draw(self, cam_y):
-        if self.invincible > 0 and int(self.invincible * 12) % 2:
+        if self.invincible > 0 and int(self.invincible * BLINK_RATE) % 2:
             return                                  # 무적 시간 동안 깜빡임
         anim, frame = self.current_frame()
         cy = self.y + (CELL // 2 - FOOT_IN_CELL) * SCALE - cam_y
