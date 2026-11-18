@@ -67,7 +67,8 @@ class Player:
         self.on_ice = False
         self.on_slope = 0              # 서 있는 경사면이 올라가는 방향 (1: 오른쪽이 높음, -1: 왼쪽이 높음, 0: 경사면 아님)
         self.invincible = 0.0          # 남은 무적 시간 (맞은 순간부터 INVINCIBLE_TIME 동안 다시 안 맞음)
-        self.slippery = 0.0            # 얼음 구슬에 맞아 어디서든 얼음 위처럼 미끄러운 남은 시간
+        self.frozen = 0.0              # 얼음 구슬에 맞아 얼어붙은 남은 시간 (조작 불가, 동작 멈춤)
+        self.frozen_pose = None        # 얼어붙은 순간의 (애니메이션, 프레임)
         self.slide_fly = False         # 경사면·얼음 끝에서 미끄러지던 속도로 날아가는 중 (착지할 때까지 조작 불가, 가로 속도가 천천히 줄어듦)
         self.slide_decel = 0.0         # 높은 곳에서 떨어져 넘어질 때 미끄러짐 감속
         self.recoil = 0.0              # 총 반동으로 밀려나는 남은 시간
@@ -95,7 +96,7 @@ class Player:
 
     def can_control(self):
         """좌우 입력을 받는 상태인지 (넘어짐 중, 땅에서 공격 중에는 X)"""
-        if self.state in KNOCKED or self.recoil > 0 or self.on_slope or self.slide_fly:
+        if self.state in KNOCKED or self.recoil > 0 or self.on_slope or self.slide_fly or self.frozen > 0:
             return False
         return not (self.state == 'attack' and self.on_ground)
 
@@ -107,6 +108,7 @@ class Player:
             return
         self.invincible = INVINCIBLE_TIME
         self.recoil = 0.0
+        self.frozen = 0.0                       # 얼어 있었으면 얼음이 깨지며 넘어짐
         if knocked:
             away = 1 if self.x > source_x else -1 if self.x < source_x else -self.facing
             self.vx = away * knock_x
@@ -124,12 +126,20 @@ class Player:
         if not knocked:
             self.set_state('fall')
 
-    def chill(self, time):
-        """서리 마법사의 얼음 구슬에 맞음: 넘어지지 않고 time 초 동안 땅이 얼음처럼 미끄러움"""
-        self.slippery = max(self.slippery, time)
+    def freeze(self, time):
+        """서리 마법사의 얼음 구슬에 맞음: time 초 동안 그 자세 그대로 얼어붙어 조작 불가.
+        맞은 순간 속도대로 땅에서는 얼음처럼 미끄러지다 멈추고, 공중이면 그대로 떨어짐.
+        넘어진 중이거나 무적 시간에는 얼지 않음"""
+        if self.invincible > 0 or self.state in KNOCKED:
+            return
+        if self.frozen <= 0:
+            self.frozen_pose = self.current_frame()
+        self.frozen = max(self.frozen, time)
+        self.recoil = 0.0
 
     def is_slippery(self):
-        return self.on_ice or self.slippery > 0
+        """얼음 위이거나 얼어붙어 미끄러지는 중"""
+        return self.on_ice or self.frozen > 0
 
     # ---------------- 입력 ----------------
     def handle_event(self, e):
@@ -138,6 +148,8 @@ class Player:
                 self.left = True
             elif e.key == SDLK_RIGHT:
                 self.right = True
+            elif self.frozen > 0:
+                pass                                # 얼어붙은 동안에는 점프·공격·무기 교체 불가
             elif e.key == SDLK_TAB:
                 if self.state not in ('attack', 'jump_attack'):     # 공격 중에는 무기 교체 불가
                     self.weapon = 'gun' if self.weapon == 'sword' else 'sword'
@@ -160,16 +172,18 @@ class Player:
                 self.left = False
             elif e.key == SDLK_RIGHT:
                 self.right = False
-            elif e.key == SDLK_UP:
+            elif e.key == SDLK_UP and self.frozen <= 0:
                 # 올라가는 도중에 키를 떼면 상승 속도를 깎아서 낮은 점프
                 if not self.on_ground and self.vy > JUMP_CUT_SPEED:
                     self.vy = JUMP_CUT_SPEED
 
     # ---------------- 갱신 ----------------
     def update(self, dt, tilemap):
-        self.t += dt
+        if self.frozen > 0:
+            self.frozen = max(0.0, self.frozen - dt)    # 얼어 있는 동안 동작 시간이 흐르지 않음
+        else:
+            self.t += dt
         self.invincible = max(0.0, self.invincible - dt)
-        self.slippery = max(0.0, self.slippery - dt)
         direction = self.right - self.left
         self.check_gun_fire()
         control = self.can_control()
@@ -231,7 +245,8 @@ class Player:
         self.check_ground(tilemap)
         if self.on_ground:
             self.slide_fly = False
-        self.update_state(direction, tilemap)
+        if self.frozen <= 0:
+            self.update_state(direction, tilemap)
         self.push_body_out(tilemap)
 
     def ice_edge(self, tilemap):
@@ -410,16 +425,17 @@ class Player:
     def on_landed(self, impact_vy, tilemap):
         """땅에 닿은 순간. impact_vy = 닿기 직전의 세로 속도(음수 = 아래로)"""
         feet = (self.x - PLAYER_HALF_W, self.y - 1, self.x + PLAYER_HALF_W, self.y)
-        if self.slippery > 0 or any(ice for _, ice in tilemap.solids_in(*feet)):
-            # 얼음(미끄러운 상태)에 내려앉으면 공중 속도를 이어받지 않고 낮은 속도부터 다시 가속
+        if any(ice for _, ice in tilemap.solids_in(*feet)):
+            # 얼음에 내려앉으면 공중 속도를 이어받지 않고 낮은 속도부터 다시 가속
             # (높이 떨어져 넘어질 때 미끄러지는 속도는 아래에서 따로 정함)
             self.vx = max(-ICE_LANDING_SPEED, min(ICE_LANDING_SPEED, self.vx))
         s = self.state
         if impact_vy <= -MAX_FALL_SPEED and s in KNOCKED:
             self.bounce_back(tilemap)                # 넘어진 채로 다시 높이 떨어짐: 누운 채 튀어 오르며 뒤로 밀림
         elif impact_vy <= -MAX_FALL_SPEED:
-            # 최고 속도로 떨어지다 땅에 닿음: 공격·함정에 맞아 날아가는 중이어도 뒤로 넘어짐
+            # 최고 속도로 떨어지다 땅에 닿음: 공격·함정에 맞아 날아가는 중이어도 뒤로 넘어짐 (얼어 있었으면 얼음이 깨짐)
             self.recoil = 0.0
+            self.frozen = 0.0
             self.set_state('fall_height')
             # 넘어지는 애니메이션 동안 FALL_HEIGHT_SLIDE 만큼 뒤로 미끄러지다 멈추도록 (일정하게 감속)
             duration = self.anims['fall_height'].duration
@@ -561,7 +577,7 @@ class Player:
     def draw(self, cam_y):
         if self.invincible > 0 and int(self.invincible * BLINK_RATE) % 2:
             return                                  # 무적 시간 동안 깜빡임
-        anim, frame = self.current_frame()
+        anim, frame = self.frozen_pose if self.frozen > 0 else self.current_frame()
         cy = self.y + (CELL // 2 - FOOT_IN_CELL) * SCALE - cam_y
         anim.draw(frame, self.x + self.body_shift(frame), cy, self.facing)
 

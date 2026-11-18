@@ -79,10 +79,10 @@ FIREBALL_GRAVITY = 1400           # 불덩이에 걸리는 중력 (px/s^2)
 FIREBALL_SPEED_X = 400            # 날아가는 시간 = 가로 거리 / 이 값 (아래 범위로 제한)
 FIREBALL_TIME = (0.6, 1.6)        # 불덩이가 목표까지 날아가는 최소·최대 시간 (초)
 FIRE_KNOCK = ENEMY_KNOCK
-# 서리 마법사: 서 있다가 보이는 플레이어에게 느린 얼음 구슬을 쏨. 맞으면 넘어지지 않고 잠깐 미끄러움
+# 서리 마법사: 서 있다가 보이는 플레이어에게 느린 얼음 구슬을 쏨. 맞으면 넘어지지 않고 잠깐 얼어붙음
 FROSTMAGE_RANGE = TILE * 10       # 플레이어를 알아차리는 거리
 FROSTMAGE_CHARGE_TIME = 1.0       # 지팡이에 마력을 모으는 시간
 FROSTMAGE_REST_TIME = 2.0
 ICE_ORB_SPEED = 220               # 얼음 구슬 속도 (px/s, 플레이어를 향해 직선)
-CHILL_TIME = 2.0                  # 얼음 구슬에 맞은 뒤 어디서든 얼음 위처럼 미끄러운 시간 (초)
+FREEZE_TIME = 1.0                 # 얼음 구슬에 맞아 얼어붙는 시간 (초). 조작 불가, 맞은 순간 속도대로 미끄러지다 멈춤
 PROJECTILE_LIFE = 6.0             # 투사체가 아무것도 안 맞고 사라지기까지 (초)

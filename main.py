@@ -5,7 +5,7 @@ from bat import Bat
 from bullet import Bullet
 from camera import Camera
 from collision import overlap
-from config import WIDTH, HEIGHT, FULLSCREEN, TILE
+from config import WIDTH, HEIGHT, FULLSCREEN, TILE, PLAYER_H
 from frost_mage import FrostMage
 from gargoyle import Gargoyle
 from goblin import Goblin
@@ -129,8 +129,8 @@ def main():
         for bullet in bullets:
             bullet.draw(cam)
         player.draw(cam)
-        if player.slippery > 0:
-            Projectile.draw_frost(player.x, player.y + 6, player.t, cam)
+        if player.frozen > 0:
+            Projectile.draw_frost(player.x, player.y + PLAYER_H / 2, get_time(), cam)
         for proj in projectiles:
             proj.draw(cam)
 
@@ -140,8 +140,8 @@ def main():
             info = f'무기: {weapon}   상태: {STATE_NAMES.get(player.state, player.state)}   높이: {height_m:.1f}칸'
             if player.on_ice:
                 info += '   [얼음]'
-            if player.slippery > 0:
-                info += f'   [미끄러움 {player.slippery:.1f}초]'
+            if player.frozen > 0:
+                info += f'   [얼어붙음 {player.frozen:.1f}초]'
             if player.invincible > 0:
                 info += f'   [무적 {player.invincible:.1f}초]'
             font.draw(70, HEIGHT - 30, info, (255, 255, 255))
