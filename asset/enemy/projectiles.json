@@ -1,0 +1,39 @@
+{
+  "frameSize": [
+    32,
+    32
+  ],
+  "note": "flying frames point right with the centre at (16,16); rotate them for an arc, use the left sheet or flipX to the left. Hit effects are centred on (16,16).",
+  "rows": [
+    {
+      "row": 0,
+      "name": "arrow flying",
+      "frames": 2
+    },
+    {
+      "row": 1,
+      "name": "fireball flying (gargoyle)",
+      "frames": 4
+    },
+    {
+      "row": 2,
+      "name": "ice orb flying (frost mage)",
+      "frames": 4
+    },
+    {
+      "row": 3,
+      "name": "arrow hit",
+      "frames": 3
+    },
+    {
+      "row": 4,
+      "name": "fire hit",
+      "frames": 4
+    },
+    {
+      "row": 5,
+      "name": "ice hit",
+      "frames": 4
+    }
+  ]
+}

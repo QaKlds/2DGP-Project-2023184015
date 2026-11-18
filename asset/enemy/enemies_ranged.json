@@ -1,0 +1,53 @@
+{
+  "frameSize": [
+    100,
+    100
+  ],
+  "feet": [
+    50,
+    84
+  ],
+  "note": "all face right; the left sheets are mirrored. 'shoot origin' is where the projectile should spawn (right-facing, pixels in the frame); mirror x for left",
+  "archer": {
+    "shootOrigin": [
+      62,
+      64
+    ],
+    "projectile": "arrow",
+    "rows": [
+      "walk 6",
+      "aim 4 (the last frame flashes: the warning)",
+      "shoot 3",
+      "death 5",
+      "respawn 5"
+    ]
+  },
+  "gargoyle": {
+    "shootOrigin": [
+      64,
+      62
+    ],
+    "projectile": "fireball (arcs)",
+    "rows": [
+      "idle 4",
+      "charge 4",
+      "spit 3",
+      "death 5",
+      "respawn 5"
+    ]
+  },
+  "frostmage": {
+    "shootOrigin": [
+      70,
+      47
+    ],
+    "projectile": "ice orb",
+    "rows": [
+      "idle 4",
+      "charge 4",
+      "cast 3",
+      "death 5",
+      "respawn 5"
+    ]
+  }
+}

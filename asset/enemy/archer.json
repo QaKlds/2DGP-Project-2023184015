@@ -1,0 +1,33 @@
+{
+  "frameSize": [
+    100,
+    100
+  ],
+  "rows": [
+    {
+      "row": 0,
+      "name": "walk",
+      "frames": 6
+    },
+    {
+      "row": 1,
+      "name": "aim",
+      "frames": 4
+    },
+    {
+      "row": 2,
+      "name": "shoot",
+      "frames": 3
+    },
+    {
+      "row": 3,
+      "name": "death",
+      "frames": 5
+    },
+    {
+      "row": 4,
+      "name": "respawn",
+      "frames": 5
+    }
+  ]
+}

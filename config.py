@@ -61,3 +61,27 @@ ENEMY_SPEED = MOVE_SPEED / 2      # 고블린 좌우 / 박쥐 상하 이동 속�
 ENEMY_RESPAWN_TIME = 5.0          # 죽은 뒤 다시 나타나기까지 (초)
 ENEMY_KNOCK = LASER_KNOCK         # 적에 닿았을 때 밀려나는 속도 (레이저와 같음)
 ENEMY_HIT_INTERVAL = 0.5          # 적에 계속 닿아 있으면 이 간격(초)마다 다시 맞음
+
+# 원거리 적 (몸에 닿아도 피해 없음, 투사체만 위험. 칼·총으로 한 방에 죽음)
+# 고블린 궁수: 순찰하다가 바라보는 쪽 같은 높이에 플레이어가 보이면 멈춰서 활을 당긴 뒤 화살을 쏨
+ARCHER_RANGE = TILE * 10          # 플레이어를 알아차리는 가로 거리 (px)
+ARCHER_AIM_TIME = 0.8             # 활을 당기는 시간 (마지막 프레임이 번쩍임 = 예고)
+ARCHER_REST_TIME = 1.2            # 쏜 뒤 다시 조준하기까지 서 있는 시간
+ARROW_SPEED = 700                 # 화살 속도 (px/s, 직선)
+ARROW_KNOCK = ENEMY_KNOCK         # 화살에 맞으면 넘어지며 날아가는 속도
+# 가고일 석상: 움직이지 않다가 플레이어가 가까이 오면 플레이어 위치로 포물선 불덩이를 뱉음
+GARGOYLE_RANGE_X = TILE * 12      # 깨어나는 가로 거리
+GARGOYLE_RANGE_Y = TILE * 8       # 깨어나는 세로 거리
+GARGOYLE_CHARGE_TIME = 0.9        # 입에 불을 모으는 시간 (예고)
+GARGOYLE_REST_TIME = 2.0          # 뱉은 뒤 다음 충전까지
+FIREBALL_GRAVITY = 1400           # 불덩이에 걸리는 중력 (px/s^2)
+FIREBALL_SPEED_X = 400            # 날아가는 시간 = 가로 거리 / 이 값 (아래 범위로 제한)
+FIREBALL_TIME = (0.6, 1.6)        # 불덩이가 목표까지 날아가는 최소·최대 시간 (초)
+FIRE_KNOCK = ENEMY_KNOCK
+# 서리 마법사: 서 있다가 보이는 플레이어에게 느린 얼음 구슬을 쏨. 맞으면 넘어지지 않고 잠깐 미끄러움
+FROSTMAGE_RANGE = TILE * 10       # 플레이어를 알아차리는 거리
+FROSTMAGE_CHARGE_TIME = 1.0       # 지팡이에 마력을 모으는 시간
+FROSTMAGE_REST_TIME = 2.0
+ICE_ORB_SPEED = 220               # 얼음 구슬 속도 (px/s, 플레이어를 향해 직선)
+CHILL_TIME = 2.0                  # 얼음 구슬에 맞은 뒤 어디서든 얼음 위처럼 미끄러운 시간 (초)
+PROJECTILE_LIFE = 6.0             # 투사체가 아무것도 안 맞고 사라지기까지 (초)

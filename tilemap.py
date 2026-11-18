@@ -22,6 +22,7 @@ ICE = 'I~'             # 미끄러운 타일
 TURRET = 'T'           # 레이저 장치 자리 (충돌만 하고 그림은 Laser가 그림)
 RECEIVER = '*'         # 레이저 받는 장치
 BAT_RANGE = ':'        # 박쥐가 날아다니는 범위 표시 (빈 칸 취급)
+SHOOTERS = 'AKF'       # 원거리 적: A 고블린 궁수 / K 가고일 석상 / F 서리 마법사
 WALL = '|'             # 보이지 않는 벽 (탑 돌기둥 안쪽 경계. 막히기만 하고 그리지 않음)
 # 45도 경사면 (asset/tiles/tiles_diag_*.png, 칸 번호 = 꽉 찬 모서리)
 #   /  바닥 경사: 오른쪽이 높음 (오른쪽 아래가 꽉 참)     \  바닥 경사: 왼쪽이 높음 (왼쪽 아래가 꽉 참)
@@ -53,6 +54,7 @@ class TileMap:
         self.receivers = set() # (col, row)
         self.goblins = []      # (col, row)
         self.bats = []         # (col, row, 범위 아래 줄, 범위 위 줄)
+        self.shooters = []     # (글자, col, row, 처음 보는 방향) - 궁수 A / 가고일 K / 서리 마법사 F
 
         # grid[row][col], row 0 = 맨 아래 줄
         lines = list(reversed(rows))
@@ -77,6 +79,10 @@ class TileMap:
                     while high + 1 < len(lines) and lines[high + 1][c] == BAT_RANGE:
                         high += 1
                     self.bats.append((c, b, low, high))
+                    ch = '.'
+                elif ch in SHOOTERS:
+                    # 처음엔 탑 안쪽 가운데를 바라봄
+                    self.shooters.append((ch, c, b, 1 if c < width / 2 else -1))
                     ch = '.'
                 elif ch == BAT_RANGE:
                     ch = '.'

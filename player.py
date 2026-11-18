@@ -67,6 +67,7 @@ class Player:
         self.on_ice = False
         self.on_slope = 0              # 서 있는 경사면이 올라가는 방향 (1: 오른쪽이 높음, -1: 왼쪽이 높음, 0: 경사면 아님)
         self.invincible = 0.0          # 남은 무적 시간 (맞은 순간부터 INVINCIBLE_TIME 동안 다시 안 맞음)
+        self.slippery = 0.0            # 얼음 구슬에 맞아 어디서든 얼음 위처럼 미끄러운 남은 시간
         self.slide_fly = False         # 경사면·얼음 끝에서 미끄러지던 속도로 날아가는 중 (착지할 때까지 조작 불가, 가로 속도가 천천히 줄어듦)
         self.slide_decel = 0.0         # 높은 곳에서 떨어져 넘어질 때 미끄러짐 감속
         self.recoil = 0.0              # 총 반동으로 밀려나는 남은 시간
@@ -123,6 +124,13 @@ class Player:
         if not knocked:
             self.set_state('fall')
 
+    def chill(self, time):
+        """서리 마법사의 얼음 구슬에 맞음: 넘어지지 않고 time 초 동안 땅이 얼음처럼 미끄러움"""
+        self.slippery = max(self.slippery, time)
+
+    def is_slippery(self):
+        return self.on_ice or self.slippery > 0
+
     # ---------------- 입력 ----------------
     def handle_event(self, e):
         if e.type == SDL_KEYDOWN:
@@ -161,6 +169,7 @@ class Player:
     def update(self, dt, tilemap):
         self.t += dt
         self.invincible = max(0.0, self.invincible - dt)
+        self.slippery = max(0.0, self.slippery - dt)
         direction = self.right - self.left
         self.check_gun_fire()
         control = self.can_control()
@@ -182,7 +191,7 @@ class Player:
                 # 얼음 끝에 걸쳐 있음: 발 중앙 밑이 비었으면 바깥쪽으로 계속 미끄러져 떨어짐 (조작 무시)
                 if self.vx * out < ICE_EDGE_SPEED:
                     self.vx = approach(self.vx, out * ICE_EDGE_SPEED, ICE_ACCEL * dt)
-            elif self.on_ice:
+            elif self.is_slippery():
                 rate = ICE_ACCEL if target != 0 else ICE_FRICTION
                 self.vx = approach(self.vx, target, rate * dt)
             else:
@@ -216,8 +225,8 @@ class Player:
             self.follow_slope(step, tilemap)
             if self.recoil > 0:
                 self.recoil -= step
-                if self.recoil <= 0 and not self.on_ice:
-                    self.vx = 0.0                   # 얼음 위가 아니면 반동 끝나면 멈춤
+                if self.recoil <= 0 and not self.is_slippery():
+                    self.vx = 0.0                   # 얼음 위(미끄러운 중)가 아니면 반동 끝나면 멈춤
 
         self.check_ground(tilemap)
         if self.on_ground:
