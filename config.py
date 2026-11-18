@@ -36,6 +36,7 @@ MAX_FALL_SPEED = 1500         # px/s  떨어지는 최고 속도 (가만히 떨�
 ICE_ACCEL = 900               # 얼음 위에서 원하는 속도까지 붙는 가속도 (px/s^2)
 ICE_FRICTION = 500            # 얼음 위에서 키를 뗐을 때 감속 (작을수록 오래 미끄러짐)
 ICE_EDGE_SPEED = 150          # 얼음 끝에 걸쳐 있으면 바깥으로 미끄러져 떨어지는 속도 (px/s)
+ICE_LANDING_SPEED = MOVE_SPEED / 3   # 얼음(미끄러운 상태)에 착지하는 순간 가로 속도를 이 값까지 줄임 → 다시 가속
 
 # 경사면 (밟으면 조작할 수 없고 아래쪽으로 미끄러짐)
 SLOPE_SPEED = MOVE_SPEED * 1.2    # 미끄러지는 최고 속도 (px/s)

@@ -4,7 +4,7 @@ from pico2d import (load_image, SDL_KEYDOWN, SDL_KEYUP,
 from anim import Anim
 from config import (CELL, SCALE, FOOT_IN_CELL, PLAYER_HALF_W, PLAYER_H,
                     MOVE_SPEED, JUMP_SPEED, JUMP_CUT_SPEED, GRAVITY, MAX_FALL_SPEED,
-                    ICE_ACCEL, ICE_FRICTION, ICE_EDGE_SPEED, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK,
+                    ICE_ACCEL, ICE_FRICTION, ICE_EDGE_SPEED, ICE_LANDING_SPEED, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK,
                     FALL_HEIGHT_SLIDE, SLOPE_SPEED, SLOPE_ACCEL, SLOPE_AIR_DECEL, KNOCK_BOUNCE_UP, KNOCK_SLIDE_DECEL, TILE)
 from tilemap import FLOOR_SLOPES
 
@@ -409,6 +409,11 @@ class Player:
 
     def on_landed(self, impact_vy, tilemap):
         """땅에 닿은 순간. impact_vy = 닿기 직전의 세로 속도(음수 = 아래로)"""
+        feet = (self.x - PLAYER_HALF_W, self.y - 1, self.x + PLAYER_HALF_W, self.y)
+        if self.slippery > 0 or any(ice for _, ice in tilemap.solids_in(*feet)):
+            # 얼음(미끄러운 상태)에 내려앉으면 공중 속도를 이어받지 않고 낮은 속도부터 다시 가속
+            # (높이 떨어져 넘어질 때 미끄러지는 속도는 아래에서 따로 정함)
+            self.vx = max(-ICE_LANDING_SPEED, min(ICE_LANDING_SPEED, self.vx))
         s = self.state
         if impact_vy <= -MAX_FALL_SPEED and s in KNOCKED:
             self.bounce_back(tilemap)                # 넘어진 채로 다시 높이 떨어짐: 누운 채 튀어 오르며 뒤로 밀림
