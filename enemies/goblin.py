@@ -1,5 +1,5 @@
 from config import SCALE, TILE, ENEMY_SPEED
-from enemy import Enemy
+from enemies.enemy import Enemy
 
 HALF_W, HEIGHT = 15, 50       # 충돌 박스 (발 중앙 기준, 스프라이트 키 33px x 1.5)
 FOOT_ROW = 87                 # 시트 칸 안에서 발바닥 아래 끝 (원본 px)

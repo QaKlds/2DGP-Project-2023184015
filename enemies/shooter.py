@@ -1,5 +1,5 @@
 from config import SCALE, TILE, PLAYER_H
-from enemy import Enemy
+from enemies.enemy import Enemy
 
 SHOOT_FPS = 10
 ORIGIN_FOOT = 84             # 시트(asset/enemy/enemies_ranged.json)에서 발 위치 (원본 px, 칸 위에서부터)

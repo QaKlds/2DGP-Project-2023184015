@@ -1,6 +1,6 @@
 from config import TILE, ENEMY_SPEED, ARCHER_RANGE, ARCHER_AIM_TIME, ARCHER_REST_TIME, ARROW_SPEED
-from projectile import Projectile
-from shooter import Shooter
+from enemies.projectile import Projectile
+from enemies.shooter import Shooter
 
 
 class Archer(Shooter):

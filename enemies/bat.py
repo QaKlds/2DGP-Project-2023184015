@@ -1,7 +1,7 @@
 import math
 
 from config import TILE, ENEMY_SPEED
-from enemy import Enemy
+from enemies.enemy import Enemy
 
 HALF_W, HALF_H = 20, 16       # 충돌 박스 (몸 중앙 기준)
 

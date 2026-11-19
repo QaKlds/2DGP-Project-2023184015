@@ -1,6 +1,6 @@
 from pico2d import load_image
 
-from collision import overlap
+from core.collision import overlap
 from config import TILE, TILE_SRC, PLAYER_HALF_W, CRUMBLE_SHAKE_TIME, CRUMBLE_RESPAWN_TIME
 
 SOLID_H = int(20 * TILE / TILE_SRC)     # 발판 그림은 칸 위쪽 20px(원본)만 차지하므로 충돌도 그만큼만

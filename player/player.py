@@ -1,12 +1,12 @@
 from pico2d import (load_image, SDL_KEYDOWN, SDL_KEYUP,
                     SDLK_LEFT, SDLK_RIGHT, SDLK_UP, SDLK_TAB, SDLK_z, SDLK_x)
 
-from anim import Anim
+from core.anim import Anim
 from config import (CELL, SCALE, FOOT_IN_CELL, PLAYER_HALF_W, PLAYER_H,
                     MOVE_SPEED, JUMP_SPEED, JUMP_CUT_SPEED, GRAVITY, MAX_FALL_SPEED,
                     ICE_ACCEL, ICE_FRICTION, ICE_EDGE_SPEED, ICE_LANDING_SPEED, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK,
                     FALL_HEIGHT_SLIDE, SLOPE_SPEED, SLOPE_ACCEL, SLOPE_AIR_DECEL, KNOCK_BOUNCE_UP, KNOCK_SLIDE_DECEL, TILE)
-from tilemap import FLOOR_SLOPES
+from core.tilemap import FLOOR_SLOPES
 
 KNOCKED = ('fall', 'fall_height', 'down', 'getup')     # 넘어져서 조작할 수 없는 상태
 MAX_STEP = 0.008                        # 빠르게 떨어질 때 타일을 뚫지 않도록 나눠서 이동

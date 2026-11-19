@@ -1,23 +1,23 @@
 from pico2d import *
 
-from archer import Archer
-from bat import Bat
-from bullet import Bullet
-from camera import Camera
-from collision import overlap
-from crumble_platform import CrumblePlatform
+from enemies.archer import Archer
+from enemies.bat import Bat
+from player.bullet import Bullet
+from core.camera import Camera
+from core.collision import overlap
+from platforms.crumble_platform import CrumblePlatform
 from config import WIDTH, HEIGHT, FULLSCREEN, TILE, PLAYER_H
-from frost_mage import FrostMage
-from gargoyle import Gargoyle
-from goblin import Goblin
-from laser import Laser
+from enemies.frost_mage import FrostMage
+from enemies.gargoyle import Gargoyle
+from enemies.goblin import Goblin
+from traps.laser import Laser
 from level_data import TEST_MAP, TEST_ZONES
-from mine import Mine
-from moving_platform import MovingPlatform
-from tower import Tower
-from player import Player
-from projectile import Projectile
-from tilemap import TileMap
+from traps.mine import Mine
+from platforms.moving_platform import MovingPlatform
+from core.tower import Tower
+from player.player import Player
+from enemies.projectile import Projectile
+from core.tilemap import TileMap
 
 # ---------------------------------------------------------------
 # 함정 + 적 테스트

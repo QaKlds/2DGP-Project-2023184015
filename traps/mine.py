@@ -1,6 +1,6 @@
 from pico2d import load_image
 
-from collision import overlap
+from core.collision import overlap
 from config import CELL, SCALE, TILE, HEIGHT, MINE_KNOCK
 
 SHEET = 'asset/trap/traps_right.png'

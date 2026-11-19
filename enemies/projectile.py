@@ -2,7 +2,7 @@ import math
 
 from pico2d import load_image
 
-from collision import overlap
+from core.collision import overlap
 from config import SCALE, PROJECTILE_LIFE, ARROW_KNOCK, FIRE_KNOCK, FREEZE_TIME
 
 SRC = 32                     # 시트 한 칸 크기 (원본 px). 날아가는 그림은 오른쪽을 보고 중심이 (16, 16)

@@ -2,7 +2,7 @@ import os
 
 from pico2d import load_image
 
-from collision import overlap
+from core.collision import overlap
 from config import CELL, SCALE, TILE, LASER_KNOCK
 
 # 방향별 한 칸 이동량

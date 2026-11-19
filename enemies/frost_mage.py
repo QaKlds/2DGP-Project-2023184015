@@ -1,8 +1,8 @@
 import math
 
 from config import FROSTMAGE_RANGE, FROSTMAGE_CHARGE_TIME, FROSTMAGE_REST_TIME, ICE_ORB_SPEED
-from projectile import Projectile
-from shooter import Shooter
+from enemies.projectile import Projectile
+from enemies.shooter import Shooter
 
 
 class FrostMage(Shooter):

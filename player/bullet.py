@@ -1,6 +1,6 @@
 from pico2d import draw_rectangle
 
-from collision import overlap
+from core.collision import overlap
 from config import BULLET_SPEED
 
 HALF_LEN, HALF_THICK = 8, 2      # 노란 막대 크기 (px)

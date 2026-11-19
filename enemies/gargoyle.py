@@ -1,7 +1,7 @@
 from config import (GARGOYLE_RANGE_X, GARGOYLE_RANGE_Y, GARGOYLE_CHARGE_TIME, GARGOYLE_REST_TIME,
                     FIREBALL_GRAVITY, FIREBALL_SPEED_X, FIREBALL_TIME)
-from projectile import Projectile
-from shooter import Shooter
+from enemies.projectile import Projectile
+from enemies.shooter import Shooter
 
 
 class Gargoyle(Shooter):
