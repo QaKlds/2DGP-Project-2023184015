@@ -27,6 +27,12 @@ TOWER_INNER_COLS = 28               # 안쪽 칸 수 (안쪽 1360px 중 1344px, 
 TOWER_PIECES = ['tower_bottom', 'tower_trans_wood_brick', 'tower_trans_brick_frozen',
                 'tower_trans_frozen_gold', 'tower_top']
 
+# 화면 왼쪽 위 HUD (시간 / 높이 패널). 값은 원본 px (asset/hud/hud.json 참고)
+HUD_SCALE = 2                 # 원본 패널 128x32 → 화면 256x64
+HUD_MARGIN = 8                # 화면 왼쪽·위 끝에서 첫 패널까지
+HUD_GAP = 4                   # 패널 사이 간격
+HUD_MAX_TIME = 99 * 3600 + 59 * 60 + 59    # 시간 표시 최대값 (99:59:59)
+
 # 플레이어 충돌 박스 (발 중앙 기준)
 PLAYER_HALF_W = 15
 PLAYER_H = 66

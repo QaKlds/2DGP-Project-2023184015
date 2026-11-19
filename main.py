@@ -1,23 +1,24 @@
 from pico2d import *
 
-from enemies.archer import Archer
-from enemies.bat import Bat
-from player.bullet import Bullet
+from config import WIDTH, HEIGHT, FULLSCREEN, TILE, PLAYER_H, TICK, MAX_FRAME_TIME
+from level_data import TEST_MAP, TEST_ZONES
 from core.camera import Camera
 from core.collision import overlap
-from platforms.crumble_platform import CrumblePlatform
-from config import WIDTH, HEIGHT, FULLSCREEN, TILE, PLAYER_H, TICK, MAX_FRAME_TIME
-from enemies.frost_mage import FrostMage
-from enemies.gargoyle import Gargoyle
-from enemies.goblin import Goblin
-from traps.laser import Laser
-from level_data import TEST_MAP, TEST_ZONES
-from traps.mine import Mine
-from platforms.moving_platform import MovingPlatform
+from core.tilemap import TileMap
 from core.tower import Tower
 from player.player import Player
+from player.bullet import Bullet
+from enemies.goblin import Goblin
+from enemies.bat import Bat
+from enemies.archer import Archer
+from enemies.gargoyle import Gargoyle
+from enemies.frost_mage import FrostMage
 from enemies.projectile import Projectile
-from core.tilemap import TileMap
+from traps.laser import Laser
+from traps.mine import Mine
+from platforms.crumble_platform import CrumblePlatform
+from platforms.moving_platform import MovingPlatform
+from ui.hud import Hud
 
 # ---------------------------------------------------------------
 # 함정 + 적 테스트
@@ -28,8 +29,6 @@ from core.tilemap import TileMap
 # ---------------------------------------------------------------
 
 BACKGROUNDS = ['asset/bg_low.png', 'asset/bg_mid.png', 'asset/bg_high.png']
-STATE_NAMES = {'idle': '대기', 'walk': '이동', 'jump': '점프', 'land': '착지', 'attack': '공격',
-               'jump_attack': '점프 공격', 'fall': '넘어짐', 'fall_height': '낙하 넘어짐', 'down': '쓰러짐', 'getup': '일어남', 'slide': '미끄러짐'}
 TELEPORT_KEYS = {SDLK_1: 0, SDLK_2: 1, SDLK_3: 2, SDLK_4: 3}     # 숫자 키 → 구간 번호
 SHOOTER_CLASSES = {'A': Archer, 'K': Gargoyle, 'F': FrostMage}  # 맵 글자 → 원거리 적
 
@@ -44,10 +43,6 @@ def draw_background(images, cam_y, map_height):
 def main():
     open_canvas(WIDTH, HEIGHT, full=FULLSCREEN)
     hide_cursor()
-    try:
-        font = load_font('C:/Windows/Fonts/malgun.ttf', 24)
-    except Exception:
-        font = None
 
     tilemap = TileMap(TEST_MAP, TEST_ZONES)
     backgrounds = [load_image(p) for p in BACKGROUNDS]
@@ -67,6 +62,8 @@ def main():
     projectiles = []          # 적이 쏜 화살·불덩이·얼음 구슬
     camera = Camera(tilemap.height)
     camera.snap(player.y)
+    hud = Hud()
+    play_time = 0.0           # 게임 시작부터 흐른 시간 (R을 누르면 0으로)
 
     running = True
     last = get_time()
@@ -82,6 +79,7 @@ def main():
             elif e.type == SDL_KEYDOWN and e.key == SDLK_r:
                 player = Player(*tilemap.start)
                 camera.snap(player.y)
+                play_time = 0.0
             elif e.type == SDL_KEYDOWN and e.key in TELEPORT_KEYS:
                 # 플레이어만 옮김 (함정·적은 그대로). 들고 있던 무기는 유지
                 weapon = player.weapon
@@ -94,6 +92,7 @@ def main():
         # 게임 계산: 지난 프레임부터 흐른 시간만큼 TICK 간격으로 나눠서 (FPS가 높으면 0번, 낮으면 여러 번)
         while lag >= TICK:
             lag -= TICK
+            play_time += TICK
             for mover in movers:
                 mover.update(TICK, tilemap, player)      # 올라탄 플레이어를 먼저 옮긴 뒤 플레이어 이동
             player.update(TICK, tilemap)
@@ -152,19 +151,8 @@ def main():
         for proj in projectiles:
             proj.draw(cam)
 
-        if font:
-            weapon = '칼' if player.weapon == 'sword' else '총'
-            height_m = (player.y - tilemap.start[1]) / TILE
-            info = f'무기: {weapon}   상태: {STATE_NAMES.get(player.state, player.state)}   높이: {height_m:.1f}칸'
-            if player.on_ice:
-                info += '   [얼음]'
-            if player.frozen > 0:
-                info += f'   [얼어붙음 {player.frozen:.1f}초]'
-            if player.invincible > 0:
-                info += f'   [무적 {player.invincible:.1f}초]'
-            font.draw(70, HEIGHT - 30, info, (255, 255, 255))
-            font.draw(70, HEIGHT - 65, '←→ 이동 / ↑ 점프 / Z 공격 / TAB 무기교체 / X 넘어짐 / R 처음으로 / 1~4 구간 이동 / ESC 종료',
-                      (230, 230, 230))
+        # 왼쪽 위 HUD: 경과 시간, 시작 바닥부터 지금 발 높이 (1칸 = 1m)
+        hud.draw(play_time, (player.y - tilemap.start[1]) / TILE)
         update_canvas()
 
     close_canvas()

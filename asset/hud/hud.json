@@ -1,0 +1,42 @@
+{
+  "font": {
+    "file": "hud_font.png",
+    "cell": [
+      12,
+      16
+    ],
+    "glyphs": "0123456789:.m",
+    "advance": {
+      "0": 11,
+      "1": 11,
+      "2": 11,
+      "3": 11,
+      "4": 11,
+      "5": 11,
+      "6": 11,
+      "7": 11,
+      "8": 11,
+      "9": 11,
+      ":": 6,
+      ".": 6,
+      "m": 12
+    },
+    "note": "draw each glyph's 12x16 cell at the pen position, then move the pen by the advance. The colour is already baked in (dark brown on a light edge)."
+  },
+  "panels": {
+    "size": [
+      128,
+      32
+    ],
+    "files": [
+      "hud_panel_time.png",
+      "hud_panel_distance.png"
+    ],
+    "textOrigin": [
+      36,
+      8
+    ],
+    "rightAlignX": 112,
+    "note": "stack them at the top left, for example at y = 8 and y = 44. Time: 00:00.00 left aligned at textOrigin (77 px wide). Distance: e.g. 123m, left aligned or right aligned to rightAlignX."
+  }
+}
