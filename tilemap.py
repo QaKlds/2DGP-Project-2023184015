@@ -23,6 +23,9 @@ TURRET = 'T'           # 레이저 장치 자리 (충돌만 하고 그림은 Las
 RECEIVER = '*'         # 레이저 받는 장치
 BAT_RANGE = ':'        # 박쥐가 날아다니는 범위 표시 (빈 칸 취급)
 SHOOTERS = 'AKF'       # 원거리 적: A 고블린 궁수 / K 가고일 석상 / F 서리 마법사
+CRUMBLE = 'C'          # 부서지는 발판 (가로로 이어진 칸이 한 덩어리)
+MOVERS = {'H': 'x', 'V': 'y'}   # 움직이는 발판: H 좌우 / V 위아래 (가로로 이어진 칸이 한 덩어리)
+MOVE_RANGE = '_'       # 움직이는 발판의 이동 범위 표시 (빈 칸 취급)
 WALL = '|'             # 보이지 않는 벽 (탑 돌기둥 안쪽 경계. 막히기만 하고 그리지 않음)
 # 45도 경사면 (asset/tiles/tiles_diag_*.png, 칸 번호 = 꽉 찬 모서리)
 #   /  바닥 경사: 오른쪽이 높음 (오른쪽 아래가 꽉 참)     \  바닥 경사: 왼쪽이 높음 (왼쪽 아래가 꽉 참)
@@ -55,6 +58,9 @@ class TileMap:
         self.goblins = []      # (col, row)
         self.bats = []         # (col, row, 범위 아래 줄, 범위 위 줄)
         self.shooters = []     # (글자, col, row, 처음 보는 방향) - 궁수 A / 가고일 K / 서리 마법사 F
+        self.crumbles = []     # (첫 칸, 끝 칸, row)
+        self.movers = []       # (첫 칸, 끝 칸, row, 축 'x'/'y', 범위 시작, 범위 끝)
+        self.platforms = []    # 움직이거나 부서지는 발판 객체들 (게임이 만들어 넣음, 충돌 확인에 포함)
 
         # grid[row][col], row 0 = 맨 아래 줄
         lines = list(reversed(rows))
@@ -84,7 +90,18 @@ class TileMap:
                     # 처음엔 탑 안쪽 가운데를 바라봄
                     self.shooters.append((ch, c, b, 1 if c < width / 2 else -1))
                     ch = '.'
-                elif ch == BAT_RANGE:
+                elif ch == BAT_RANGE or ch == MOVE_RANGE:
+                    ch = '.'
+                elif ch == CRUMBLE or ch in MOVERS:
+                    # 가로로 이어진 같은 글자의 첫 칸에서 한 덩어리로 읽음
+                    if c == 0 or line[c - 1] != ch:
+                        c1 = c
+                        while c1 + 1 < width and line[c1 + 1] == ch:
+                            c1 += 1
+                        if ch == CRUMBLE:
+                            self.crumbles.append((c, c1, b))
+                        else:
+                            self.movers.append((c, c1, b, MOVERS[ch]) + self._move_range(lines, c, c1, b, MOVERS[ch]))
                     ch = '.'
                 elif ch in LASER_CHARS:
                     self.lasers.append((c, b) + LASER_CHARS[ch])
@@ -101,6 +118,24 @@ class TileMap:
                        for style in ('wood', 'brick', 'frozen', 'gold')}
         self.diag_sheets = {style: load_image(f'asset/tiles/tiles_diag_{style}.png')
                             for style in ('wood', 'brick', 'frozen', 'gold')}
+
+    @staticmethod
+    def _move_range(lines, c0, c1, b, axis):
+        """발판 옆(좌우) 또는 위아래(첫 칸 기준)로 이어진 '_' 칸까지가 이동 범위. (범위 시작, 범위 끝) 반환
+        좌우: 발판 왼쪽 끝 칸이 갈 수 있는 열 범위 / 위아래: 발판이 갈 수 있는 줄 범위"""
+        if axis == 'x':
+            lo, hi = c0, c1
+            while lo - 1 >= 0 and lines[b][lo - 1] == MOVE_RANGE:
+                lo -= 1
+            while hi + 1 < len(lines[b]) and lines[b][hi + 1] == MOVE_RANGE:
+                hi += 1
+            return lo, hi - (c1 - c0)
+        lo = hi = b
+        while lo - 1 >= 0 and lines[lo - 1][c0] == MOVE_RANGE:
+            lo -= 1
+        while hi + 1 < len(lines) and lines[hi + 1][c0] == MOVE_RANGE:
+            hi += 1
+        return lo, hi
 
     # ---------------- 조회 ----------------
     def at(self, c, b):
@@ -132,6 +167,10 @@ class TileMap:
                 rect = self.tile_rect(col, row)
                 if rect and l < rect[2] and r > rect[0] and b < rect[3] and t > rect[1]:
                     out.append((rect, self.at(col, row) in ICE))
+        for p in self.platforms:
+            for rect, ice in p.solid_rects():
+                if l < rect[2] and r > rect[0] and b < rect[3] and t > rect[1]:
+                    out.append((rect, ice))
         return out
 
     # ---------------- 경사면 ----------------

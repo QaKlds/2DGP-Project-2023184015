@@ -5,6 +5,7 @@ from bat import Bat
 from bullet import Bullet
 from camera import Camera
 from collision import overlap
+from crumble_platform import CrumblePlatform
 from config import WIDTH, HEIGHT, FULLSCREEN, TILE, PLAYER_H
 from frost_mage import FrostMage
 from gargoyle import Gargoyle
@@ -12,6 +13,7 @@ from goblin import Goblin
 from laser import Laser
 from level_data import TEST_MAP, TEST_ZONES
 from mine import Mine
+from moving_platform import MovingPlatform
 from tower import Tower
 from player import Player
 from projectile import Projectile
@@ -51,6 +53,12 @@ def main():
     backgrounds = [load_image(p) for p in BACKGROUNDS]
     tower = Tower()
     player = Player(*tilemap.start)
+    # 부서지는·움직이는 발판 (구역 무늬를 따르고, 얼음 구역에서는 미끄러움). 타일맵 충돌 확인에 함께 들어감
+    crumbles = [CrumblePlatform(c0, c1, b, tilemap.zone_at(b), tilemap.zone_at(b) == 'frozen')
+                for c0, c1, b in tilemap.crumbles]
+    movers = [MovingPlatform(c0, c1, b, axis, lo, hi, tilemap.zone_at(b), tilemap.zone_at(b) == 'frozen')
+              for c0, c1, b, axis, lo, hi in tilemap.movers]
+    tilemap.platforms = crumbles + movers
     lasers = [Laser(tilemap, *info) for info in tilemap.lasers]
     mines = [Mine(*pos) for pos in tilemap.mines]
     shooters = [SHOOTER_CLASSES[ch](c, b, facing) for ch, c, b, facing in tilemap.shooters]
@@ -82,7 +90,11 @@ def main():
             else:
                 player.handle_event(e)
 
+        for mover in movers:
+            mover.update(dt, tilemap, player)      # 올라탄 플레이어를 먼저 옮긴 뒤 플레이어 이동
         player.update(dt, tilemap)
+        for crumble in crumbles:
+            crumble.update(dt, player)
         for laser in lasers:
             laser.update(dt, player)
         for mine in mines:
@@ -122,6 +134,8 @@ def main():
         draw_background(backgrounds, cam, tilemap.height)
         tower.draw(cam)
         tilemap.draw(cam)
+        for platform in tilemap.platforms:
+            platform.draw(cam)
         for trap in mines + lasers:
             trap.draw(cam)
         for enemy in enemies:

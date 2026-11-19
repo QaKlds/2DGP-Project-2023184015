@@ -1,0 +1,33 @@
+{
+  "moving": {
+    "files": "tiles_moving_<zone>.png",
+    "tile": 32,
+    "cols": [
+      "left end (arrow left)",
+      "middle (gear)",
+      "right end (arrow right)"
+    ],
+    "rows": [
+      "frame 1",
+      "frame 2 (gears turn, arrows blink): play at about 4 fps"
+    ]
+  },
+  "crumble": {
+    "files": "tiles_crumble_<zone>.png",
+    "frame": [
+      32,
+      64
+    ],
+    "rows": [
+      "left end",
+      "middle",
+      "right end"
+    ],
+    "columns": [
+      "0 idle (cracked)",
+      "1-3 shaking: play when stepped on, about 0.4 s",
+      "4-7 breaking and falling: the collision is gone from frame 4",
+      "8-10 coming back: the collision returns at frame 10, which equals idle with a white flash"
+    ]
+  }
+}
