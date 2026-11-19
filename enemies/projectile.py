@@ -51,9 +51,11 @@ class Projectile:
         """플레이어에 맞음: 화살·불덩이는 넘어지며 날아가고, 얼음 구슬은 잠깐 얼어붙음"""
         if self.kind == 'ice':
             player.freeze(FREEZE_TIME)
+        elif self.kind == 'arrow':
+            # 화살은 날아가던 방향으로 밀어냄 (맞은 쪽 반대로 날아감)
+            player.hit(*ARROW_KNOCK, push_dir=1 if self.vx > 0 else -1)
         else:
-            knock = ARROW_KNOCK if self.kind == 'arrow' else FIRE_KNOCK
-            player.hit(*knock, source_x=self.x)
+            player.hit(*FIRE_KNOCK, source_x=self.x)
         self.burst()
 
     # ---------------- 갱신 ----------------

@@ -100,16 +100,23 @@ class Player:
             return False
         return not (self.state == 'attack' and self.on_ground)
 
-    def hit(self, knock_x, knock_y, source_x=None):
+    def hit(self, knock_x, knock_y, source_x=None, push_dir=0):
         """함정·적에 맞음: 보고 있는 방향 기준 뒤로 날아가며 넘어짐.
-        이미 넘어진 중에 또 맞으면 때린 쪽(source_x) 반대로 다시 날아감"""
+        이미 넘어진 중에 또 맞으면 때린 쪽(source_x) 반대로 다시 날아감.
+        push_dir(1/-1)을 주면 그 방향으로 날아감 (화살처럼 날아온 쪽 반대로). 이때 맞은 쪽을 보며 뒤로 넘어짐"""
         knocked = self.state in KNOCKED
-        if self.invincible > 0 or (knocked and source_x is None):
+        if self.invincible > 0 or (knocked and source_x is None and not push_dir):
             return
         self.invincible = INVINCIBLE_TIME
         self.recoil = 0.0
         self.frozen = 0.0                       # 얼어 있었으면 얼음이 깨지며 넘어짐
-        if knocked:
+        if push_dir:
+            self.vx = push_dir * knock_x
+            if knocked:
+                self.set_state('down' if self.state in ('down', 'getup') else 'fall')
+            else:
+                self.facing = -push_dir         # 날아온 쪽을 보고 뒤로 넘어지는 그림이 되게
+        elif knocked:
             away = 1 if self.x > source_x else -1 if self.x < source_x else -self.facing
             self.vx = away * knock_x
             if self.state in ('down', 'getup'):
