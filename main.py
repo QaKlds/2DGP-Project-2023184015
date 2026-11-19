@@ -6,7 +6,7 @@ from player.bullet import Bullet
 from core.camera import Camera
 from core.collision import overlap
 from platforms.crumble_platform import CrumblePlatform
-from config import WIDTH, HEIGHT, FULLSCREEN, TILE, PLAYER_H
+from config import WIDTH, HEIGHT, FULLSCREEN, TILE, PLAYER_H, TICK, MAX_FRAME_TIME
 from enemies.frost_mage import FrostMage
 from enemies.gargoyle import Gargoyle
 from enemies.goblin import Goblin
@@ -70,9 +70,10 @@ def main():
 
     running = True
     last = get_time()
+    lag = 0.0                 # 아직 계산하지 못한 시간 (TICK 만큼씩 꺼내서 계산)
     while running:
         now = get_time()
-        dt = min(now - last, 0.05)
+        lag += min(now - last, MAX_FRAME_TIME)
         last = now
 
         for e in get_events():
@@ -90,44 +91,47 @@ def main():
             else:
                 player.handle_event(e)
 
-        for mover in movers:
-            mover.update(dt, tilemap, player)      # 올라탄 플레이어를 먼저 옮긴 뒤 플레이어 이동
-        player.update(dt, tilemap)
-        for crumble in crumbles:
-            crumble.update(dt, player)
-        for laser in lasers:
-            laser.update(dt, player)
-        for mine in mines:
-            mine.update(dt, player, camera.y)
-        for enemy in enemies:
-            enemy.update(dt, tilemap, player)
-        # 원거리 적이 이번에 쏜 투사체를 가져와서 날림
-        for shooter in shooters:
-            projectiles += shooter.shots
-            shooter.shots.clear()
-        for proj in projectiles:
-            proj.update(dt, tilemap, player)
-        projectiles = [p for p in projectiles if p.alive]
-
-        # 칼: 휘두르는 프레임에 칼 범위에 닿은 적은 죽음
-        sword = player.sword_rect()
-        if sword:
-            for enemy in enemies:
-                if enemy.is_alive() and overlap(sword, enemy.hitbox()):
-                    enemy.kill()
+        # 게임 계산: 지난 프레임부터 흐른 시간만큼 TICK 간격으로 나눠서 (FPS가 높으면 0번, 낮으면 여러 번)
+        while lag >= TICK:
+            lag -= TICK
+            for mover in movers:
+                mover.update(TICK, tilemap, player)      # 올라탄 플레이어를 먼저 옮긴 뒤 플레이어 이동
+            player.update(TICK, tilemap)
+            for crumble in crumbles:
+                crumble.update(TICK, player)
+            for laser in lasers:
+                laser.update(TICK, player)
             for mine in mines:
-                if mine.is_armed() and overlap(sword, mine.rect()):
-                    mine.defuse()                   # 칼로 벤 지뢰는 터지지만 피해 없음
+                mine.update(TICK, player, camera.y)
+            for enemy in enemies:
+                enemy.update(TICK, tilemap, player)
+            # 원거리 적이 이번에 쏜 투사체를 가져와서 날림
+            for shooter in shooters:
+                projectiles += shooter.shots
+                shooter.shots.clear()
             for proj in projectiles:
-                if proj.is_flying() and overlap(sword, proj.rect()):
-                    proj.burst()                    # 칼로 벤 투사체는 터지며 사라짐
-        # 총: 이번에 쏜 총알을 만들고, 날아가다 블록이나 적에 닿으면 사라짐
-        bullets += [Bullet(*shot) for shot in player.shots]
-        player.shots.clear()
-        for bullet in bullets:
-            bullet.update(dt, tilemap, enemies, mines)
-        bullets = [b for b in bullets if b.alive]
-        camera.update(dt, player.y)
+                proj.update(TICK, tilemap, player)
+            projectiles = [p for p in projectiles if p.alive]
+
+            # 칼: 휘두르는 프레임에 칼 범위에 닿은 적은 죽음
+            sword = player.sword_rect()
+            if sword:
+                for enemy in enemies:
+                    if enemy.is_alive() and overlap(sword, enemy.hitbox()):
+                        enemy.kill()
+                for mine in mines:
+                    if mine.is_armed() and overlap(sword, mine.rect()):
+                        mine.defuse()                   # 칼로 벤 지뢰는 터지지만 피해 없음
+                for proj in projectiles:
+                    if proj.is_flying() and overlap(sword, proj.rect()):
+                        proj.burst()                    # 칼로 벤 투사체는 터지며 사라짐
+            # 총: 이번에 쏜 총알을 만들고, 날아가다 블록이나 적에 닿으면 사라짐
+            bullets += [Bullet(*shot) for shot in player.shots]
+            player.shots.clear()
+            for bullet in bullets:
+                bullet.update(TICK, tilemap, enemies, mines)
+            bullets = [b for b in bullets if b.alive]
+            camera.update(TICK, player.y)
 
         clear_canvas()
         cam = int(camera.y)

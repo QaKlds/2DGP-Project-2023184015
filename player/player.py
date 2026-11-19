@@ -2,14 +2,14 @@ from pico2d import (load_image, SDL_KEYDOWN, SDL_KEYUP,
                     SDLK_LEFT, SDLK_RIGHT, SDLK_UP, SDLK_TAB, SDLK_z, SDLK_x)
 
 from core.anim import Anim
-from config import (CELL, SCALE, FOOT_IN_CELL, PLAYER_HALF_W, PLAYER_H,
+from config import (TICK, CELL, SCALE, FOOT_IN_CELL, PLAYER_HALF_W, PLAYER_H,
                     MOVE_SPEED, JUMP_SPEED, JUMP_CUT_SPEED, GRAVITY, MAX_FALL_SPEED,
                     ICE_ACCEL, ICE_FRICTION, ICE_EDGE_SPEED, ICE_LANDING_SPEED, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK,
                     FALL_HEIGHT_SLIDE, SLOPE_SPEED, SLOPE_ACCEL, SLOPE_AIR_DECEL, KNOCK_BOUNCE_UP, KNOCK_SLIDE_DECEL, TILE)
 from core.tilemap import FLOOR_SLOPES
 
 KNOCKED = ('fall', 'fall_height', 'down', 'getup')     # 넘어져서 조작할 수 없는 상태
-MAX_STEP = 0.008                        # 빠르게 떨어질 때 타일을 뚫지 않도록 나눠서 이동
+MAX_STEP = TICK                         # 빠르게 떨어질 때 타일을 뚫지 않도록 나눠서 이동 (게임 계산 한 번 = 한 걸음)
 BLINK_RATE = 12                         # 무적일 때 1초에 깜빡이는 횟수 x2 (켜짐/꺼짐)
 SLOPE_DEPTH = 16                        # 발 중앙이 경사면 속으로 이만큼(px)까지 파고들면 위로 올려 줌 (더 깊으면 옆면에 막힘)
 
