@@ -63,8 +63,8 @@ def run_title():
         update_canvas()
 
 
-def play():
-    """게임 한 판. ESC나 창 닫기로 끝남"""
+def play(hud):
+    """게임 한 판. ESC나 창 닫기로 끝남. hud는 최고기록을 이어서 기억하도록 밖에서 받음"""
     hide_cursor()
     tilemap = TileMap(TEST_MAP, TEST_ZONES)
     backgrounds = [load_image(p) for p in BACKGROUNDS]
@@ -84,7 +84,6 @@ def play():
     projectiles = []          # 적이 쏜 화살·불덩이·얼음 구슬
     camera = Camera(tilemap.height)
     camera.snap(player.y)
-    hud = Hud()
     play_time = 0.0           # 게임 시작부터 흐른 시간 (R을 누르면 0으로)
 
     running = True
@@ -174,14 +173,17 @@ def play():
             proj.draw(cam)
 
         # 왼쪽 위 HUD: 경과 시간, 시작 바닥부터 지금 발 높이 (1칸 = 1m)
-        hud.draw(play_time, (player.y - tilemap.start[1]) / TILE)
+        height_m = (player.y - tilemap.start[1]) / TILE
+        hud.record(height_m)
+        hud.draw(play_time, height_m)
         update_canvas()
 
 
 def main():
     open_canvas(WIDTH, HEIGHT, full=FULLSCREEN)
+    hud = Hud()               # 최고기록은 게임을 켜 둔 동안 유지
     if run_title() == 'start':
-        play()
+        play(hud)
     close_canvas()
 
 
