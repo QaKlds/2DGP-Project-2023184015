@@ -65,6 +65,7 @@ class Player:
         self.weapon = 'sword'
         self.on_ground = True
         self.on_ice = False
+        self.from_ice = False          # 마지막으로 서 있던 땅이 얼음이었는지 (공중에서는 떠나기 직전 땅)
         self.on_slope = 0              # 서 있는 경사면이 올라가는 방향 (1: 오른쪽이 높음, -1: 왼쪽이 높음, 0: 경사면 아님)
         self.invincible = 0.0          # 남은 무적 시간 (맞은 순간부터 INVINCIBLE_TIME 동안 다시 안 맞음)
         self.frozen = 0.0              # 얼음 구슬에 맞아 얼어붙은 남은 시간 (조작 불가, 동작 멈춤)
@@ -428,13 +429,15 @@ class Player:
             self.slide_fly = True           # 얼음 위를 미끄러지다 끝에서 떨어짐: 미끄러지던 속도를 이어감
         self.on_ground = bool(under)
         self.on_ice = any(ice for _, ice in under)
+        if self.on_ground:
+            self.from_ice = self.on_ice
 
     def on_landed(self, impact_vy, tilemap):
         """땅에 닿은 순간. impact_vy = 닿기 직전의 세로 속도(음수 = 아래로)"""
         feet = (self.x - PLAYER_HALF_W, self.y - 1, self.x + PLAYER_HALF_W, self.y)
-        if any(ice for _, ice in tilemap.solids_in(*feet)):
-            # 얼음에 내려앉으면 공중 속도를 이어받지 않고 낮은 속도부터 다시 가속
-            # (높이 떨어져 넘어질 때 미끄러지는 속도는 아래에서 따로 정함)
+        if not self.from_ice and any(ice for _, ice in tilemap.solids_in(*feet)):
+            # 보통 땅에서 뛰어 얼음에 내려앉으면 공중 속도를 이어받지 않고 낮은 속도부터 다시 가속.
+            # 얼음에서 뛰었다 얼음에 내려앉으면 미끄러지던 속도 그대로 (높이 떨어져 넘어질 때 미끄러지는 속도는 아래에서 따로 정함)
             self.vx = max(-ICE_LANDING_SPEED, min(ICE_LANDING_SPEED, self.vx))
         s = self.state
         if impact_vy <= -MAX_FALL_SPEED and s in KNOCKED:
