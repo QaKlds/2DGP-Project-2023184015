@@ -19,6 +19,7 @@ from traps.mine import Mine
 from platforms.crumble_platform import CrumblePlatform
 from platforms.moving_platform import MovingPlatform
 from ui.hud import Hud
+from ui.pause import PauseMenu
 from ui.title import TitleScreen
 
 # ---------------------------------------------------------------
@@ -26,7 +27,7 @@ from ui.title import TitleScreen
 # 게임 (함정 + 적 테스트)
 #   ←→ : 이동          ↑ : 점프 (짧게 누르면 낮은 점프)      Z : 공격
 #   TAB : 무기 교체 (칼 <-> 총)       X : 제자리 넘어지기
-#   R   : 시작 위치로 돌아가기        ESC : 종료
+#   R   : 시작 위치로 돌아가기        ESC : 일시정지 메뉴 (계속하기 / 다시 시작 / 시작화면 / 종료, ESC 다시 누르면 계속)
 #   1~4 : 각 구간(나무/벽돌/얼음/금) 첫 발판으로 순간이동 (테스트용)
 # ---------------------------------------------------------------
 
@@ -63,8 +64,9 @@ def run_title():
         update_canvas()
 
 
-def play(hud):
-    """게임 한 판. ESC나 창 닫기로 끝남. hud는 최고기록을 이어서 기억하도록 밖에서 받음"""
+def play(hud, pause):
+    """게임 한 판. 일시정지 메뉴에서 고른 'restart' / 'main_menu' / 'quit'을 돌려줌 (창을 닫으면 'quit').
+    hud(최고기록)와 pause(메뉴 그림)는 판이 바뀌어도 이어서 쓰도록 밖에서 받음"""
     hide_cursor()
     tilemap = TileMap(TEST_MAP, TEST_ZONES)
     backgrounds = [load_image(p) for p in BACKGROUNDS]
@@ -86,17 +88,30 @@ def play(hud):
     camera.snap(player.y)
     play_time = 0.0           # 게임 시작부터 흐른 시간 (R을 누르면 0으로)
 
-    running = True
+    paused = False            # 일시정지 메뉴가 열려 있는 동안 게임 계산(시간 포함)이 멈춤
     last = get_time()
     lag = 0.0                 # 아직 계산하지 못한 시간 (TICK 만큼씩 꺼내서 계산)
-    while running:
+    while True:
         now = get_time()
-        lag += min(now - last, MAX_FRAME_TIME)
+        if not paused:
+            lag += min(now - last, MAX_FRAME_TIME)
         last = now
 
         for e in get_events():
-            if e.type == SDL_QUIT or (e.type == SDL_KEYDOWN and e.key == SDLK_ESCAPE):
-                running = False
+            if e.type == SDL_QUIT:
+                return 'quit'
+            if paused:
+                choice = pause.handle_event(e)
+                if choice == 'resume':
+                    paused = False
+                    hide_cursor()
+                elif choice:
+                    return choice
+            elif e.type == SDL_KEYDOWN and e.key == SDLK_ESCAPE:
+                paused = True
+                pause.open()
+                show_cursor()
+                player.left = player.right = False      # 메뉴 중에 뗀 방향키 때문에 계속 걷지 않게
             elif e.type == SDL_KEYDOWN and e.key == SDLK_r:
                 player = Player(*tilemap.start)
                 camera.snap(player.y)
@@ -111,7 +126,7 @@ def play(hud):
                 player.handle_event(e)
 
         # 게임 계산: 지난 프레임부터 흐른 시간만큼 TICK 간격으로 나눠서 (FPS가 높으면 0번, 낮으면 여러 번)
-        while lag >= TICK:
+        while not paused and lag >= TICK:
             lag -= TICK
             play_time += TICK
             for mover in movers:
@@ -176,14 +191,22 @@ def play(hud):
         height_m = (player.y - tilemap.start[1]) / TILE
         hud.record(height_m)
         hud.draw(play_time, height_m)
+        if paused:
+            pause.draw()
         update_canvas()
 
 
 def main():
     open_canvas(WIDTH, HEIGHT, full=FULLSCREEN)
     hud = Hud()               # 최고기록은 게임을 켜 둔 동안 유지
-    if run_title() == 'start':
-        play(hud)
+    pause = PauseMenu()
+    # 시작화면 → 게임. 일시정지 메뉴에서 다시 시작하면 새 판, 시작화면을 고르면 처음 화면으로
+    while run_title() == 'start':
+        result = 'restart'
+        while result == 'restart':
+            result = play(hud, pause)
+        if result == 'quit':
+            break
     close_canvas()
 
 

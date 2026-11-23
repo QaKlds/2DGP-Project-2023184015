@@ -1,0 +1,68 @@
+{
+ "canvas": [
+  1920,
+  1080
+ ],
+ "note": "Center pause_panel on the screen over a dark 55-65% black overlay. Positions are relative to the panel's top-left in final px.",
+ "panel": {
+  "file": "pause_panel.png",
+  "size": [
+   440,
+   508
+  ]
+ },
+ "buttons": {
+  "resume": {
+   "normal": "pause_btn_resume.png",
+   "selected": "pause_btn_resume_sel.png",
+   "pos": [
+    50,
+    116
+   ],
+   "size": [
+    340,
+    80
+   ],
+   "label": "RESUME"
+  },
+  "restart": {
+   "normal": "pause_btn_restart.png",
+   "selected": "pause_btn_restart_sel.png",
+   "pos": [
+    50,
+    212
+   ],
+   "size": [
+    340,
+    80
+   ],
+   "label": "RESTART"
+  },
+  "main_menu": {
+   "normal": "pause_btn_main_menu.png",
+   "selected": "pause_btn_main_menu_sel.png",
+   "pos": [
+    50,
+    308
+   ],
+   "size": [
+    340,
+    80
+   ],
+   "label": "MAIN MENU"
+  },
+  "quit": {
+   "normal": "pause_btn_quit.png",
+   "selected": "pause_btn_quit_sel.png",
+   "pos": [
+    50,
+    404
+   ],
+   "size": [
+    340,
+    80
+   ],
+   "label": "QUIT"
+  }
+ }
+}
