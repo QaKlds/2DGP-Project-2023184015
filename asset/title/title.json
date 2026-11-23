@@ -1,0 +1,97 @@
+{
+ "canvas": [
+  1920,
+  1080
+ ],
+ "scale": 2,
+ "note": "coordinates below are in 1920x1080 px (top-left origin)",
+ "layersBackToFront": [
+  "title_sky",
+  "title_clouds_far",
+  "title_tower",
+  "title_clouds_near",
+  "title_ground"
+ ],
+ "cloudScroll": {
+  "title_clouds_far": "~8 px/s leftward, tile horizontally (seamless)",
+  "title_clouds_near": "~20 px/s leftward, tile horizontally (seamless)"
+ },
+ "logo": {
+  "file": "title_logo.png",
+  "size": [
+   600,
+   200
+  ],
+  "pos": [
+   80,
+   72
+  ]
+ },
+ "buttons": {
+  "start": {
+   "normal": "title_btn_start.png",
+   "selected": "title_btn_start_sel.png",
+   "pos": [
+    210,
+    460
+   ],
+   "size": [
+    340,
+    80
+   ]
+  },
+  "quit": {
+   "normal": "title_btn_quit.png",
+   "selected": "title_btn_quit_sel.png",
+   "pos": [
+    210,
+    568
+   ],
+   "size": [
+    340,
+    80
+   ]
+  }
+ },
+ "controls": {
+  "file": "title_controls.png",
+  "pos": [
+   80,
+   760
+  ],
+  "size": [
+   520,
+   248
+  ]
+ },
+ "torch": {
+  "file": "title_torch_flame.png",
+  "frames": 6,
+  "frameSize": [
+   32,
+   48
+  ],
+  "fps": 10,
+  "positions": [
+   [
+    1184,
+    904
+   ],
+   [
+    1400,
+    904
+   ]
+  ],
+  "note": "placed beside the tower door; free to reposition"
+ },
+ "sparkle": {
+  "file": "title_star_sparkle.png",
+  "frames": 6,
+  "frameSize": [
+   18,
+   18
+  ],
+  "fps": 8,
+  "note": "spawn at random positions in the upper sky, random phase"
+ }
+}

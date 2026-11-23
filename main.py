@@ -19,9 +19,11 @@ from traps.mine import Mine
 from platforms.crumble_platform import CrumblePlatform
 from platforms.moving_platform import MovingPlatform
 from ui.hud import Hud
+from ui.title import TitleScreen
 
 # ---------------------------------------------------------------
-# 함정 + 적 테스트
+# 시작화면: ↑↓ 또는 마우스로 고르고 Enter / Z / 클릭으로 결정 (START = 게임 시작, QUIT·ESC = 종료)
+# 게임 (함정 + 적 테스트)
 #   ←→ : 이동          ↑ : 점프 (짧게 누르면 낮은 점프)      Z : 공격
 #   TAB : 무기 교체 (칼 <-> 총)       X : 제자리 넘어지기
 #   R   : 시작 위치로 돌아가기        ESC : 종료
@@ -40,10 +42,30 @@ def draw_background(images, cam_y, map_height):
     img.draw(WIDTH / 2, HEIGHT / 2, WIDTH, WIDTH)
 
 
-def main():
-    open_canvas(WIDTH, HEIGHT, full=FULLSCREEN)
-    hide_cursor()
+def run_title():
+    """시작화면을 보여주고 고른 메뉴('start' / 'quit')를 돌려줌"""
+    title = TitleScreen()
+    show_cursor()
+    last = get_time()
+    while True:
+        now = get_time()
+        dt = min(now - last, MAX_FRAME_TIME)
+        last = now
+        for e in get_events():
+            if e.type == SDL_QUIT or (e.type == SDL_KEYDOWN and e.key == SDLK_ESCAPE):
+                return 'quit'
+            choice = title.handle_event(e)
+            if choice:
+                return choice
+        title.update(dt)
+        clear_canvas()
+        title.draw()
+        update_canvas()
 
+
+def play():
+    """게임 한 판. ESC나 창 닫기로 끝남"""
+    hide_cursor()
     tilemap = TileMap(TEST_MAP, TEST_ZONES)
     backgrounds = [load_image(p) for p in BACKGROUNDS]
     tower = Tower()
@@ -155,6 +177,11 @@ def main():
         hud.draw(play_time, (player.y - tilemap.start[1]) / TILE)
         update_canvas()
 
+
+def main():
+    open_canvas(WIDTH, HEIGHT, full=FULLSCREEN)
+    if run_title() == 'start':
+        play()
     close_canvas()
 
 
