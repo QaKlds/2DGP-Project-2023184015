@@ -43,5 +43,28 @@
    46,
    8
   ]
+ },
+ "weapon": {
+  "files": {
+   "sword": "hud_weapon_sword.png",
+   "gun": "hud_weapon_gun.png"
+  },
+  "size": [
+   64,
+   44
+  ],
+  "icons": [
+   "weapon_icon_sword.png",
+   "weapon_icon_gun.png"
+  ],
+  "iconSize": [
+   26,
+   26
+  ],
+  "slot": [
+   19,
+   9
+  ],
+  "note": "One slot showing the equipped weapon. When TAB is pressed, swap to the other image. Stack under the other panels, e.g. y = 116."
  }
 }

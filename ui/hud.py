@@ -1,6 +1,6 @@
 from pico2d import load_image
 
-from config import HEIGHT, HUD_SCALE, HUD_MARGIN, HUD_GAP, HUD_MAX_TIME
+from config import HEIGHT, HUD_SCALE, HUD_MARGIN, HUD_GAP, HUD_MAX_TIME, HUD_WEAPON_SCALE
 
 DIR = 'asset/hud'
 # 글꼴 (asset/hud/hud.json): 12x16 칸에 글자가 하나씩, 그린 뒤 글자마다 정해진 만큼 펜을 옮김
@@ -10,29 +10,35 @@ ADVANCE = {':': 6, '.': 6, 'm': 12}       # 나머지(숫자)는 11
 PANEL_W, PANEL_H = 128, 32
 TEXT_X, TEXT_Y = 36, 8                   # 패널 왼쪽 위에서 글자가 시작하는 자리
 BEST_TEXT_X = 46                         # 최고기록 패널은 BEST 글자 뒤에서 시작
+WEAPONS = ('sword', 'gun')               # 무기 칸 그림: hud_weapon_<무기>.png (64x44)
 
 
 class Hud:
-    """화면 왼쪽 위에 경과 시간(시:분:초), 지금 높이(m), 최고기록(m) 패널을 차례로 그림.
+    """화면 왼쪽 위에 경과 시간(시:분:초), 지금 높이(m), 최고기록(m) 패널, 지금 든 무기 칸을 차례로 그림.
     최고기록은 이 객체가 살아 있는 동안(게임을 켜 둔 동안) 기억함"""
     def __init__(self):
         self.font = load_image(f'{DIR}/hud_font.png')
         self.time_panel = load_image(f'{DIR}/hud_panel_time.png')
         self.height_panel = load_image(f'{DIR}/hud_panel_distance.png')
         self.best_panel = load_image(f'{DIR}/hud_panel_best.png')
+        self.weapons = {w: load_image(f'{DIR}/hud_weapon_{w}.png') for w in WEAPONS}
         self.best = 0                           # 지금까지 올라간 가장 높은 곳 (m)
 
     def record(self, height_m):
         """지금 높이로 최고기록을 갱신"""
         self.best = max(self.best, int(height_m))
 
-    def draw(self, play_time, height_m):
+    def draw(self, play_time, height_m, weapon):
         s = HUD_SCALE
         top = HEIGHT - HUD_MARGIN * s
         step = (PANEL_H + HUD_GAP) * s
         self._panel(self.time_panel, top, self.format_time(play_time))
         self._panel(self.height_panel, top - step, f'{max(0, int(height_m))}m')
         self._panel(self.best_panel, top - step * 2, f'{self.best}m', BEST_TEXT_X)
+        # 무기 칸: 최고기록 패널 아래에 같은 간격으로, TAB으로 바꾸면 바로 다른 그림
+        image = self.weapons[weapon]
+        w, h = image.w * HUD_WEAPON_SCALE, image.h * HUD_WEAPON_SCALE
+        image.draw_to_origin(HUD_MARGIN * s, top - step * 3 - h, w, h)
 
     @staticmethod
     def format_time(t):

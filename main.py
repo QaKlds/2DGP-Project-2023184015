@@ -190,7 +190,7 @@ def play(hud, pause):
         # 왼쪽 위 HUD: 경과 시간, 시작 바닥부터 지금 발 높이 (1칸 = 1m)
         height_m = (player.y - tilemap.start[1]) / TILE
         hud.record(height_m)
-        hud.draw(play_time, height_m)
+        hud.draw(play_time, height_m, player.weapon)
         if paused:
             pause.draw()
         update_canvas()
