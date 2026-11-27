@@ -6,7 +6,7 @@ from config import (TICK, CELL, SCALE, FOOT_IN_CELL, PLAYER_HALF_W, PLAYER_H,
                     MOVE_SPEED, JUMP_SPEED, JUMP_CUT_SPEED, GRAVITY, MAX_FALL_SPEED,
                     ICE_ACCEL, ICE_FRICTION, ICE_EDGE_SPEED, ICE_LANDING_SPEED, INVINCIBLE_TIME, GUN_RECOIL_UP, GUN_RECOIL_BACK,
                     FALL_HEIGHT_SLIDE, SLOPE_SPEED, SLOPE_ACCEL, SLOPE_AIR_DECEL, KNOCK_BOUNCE_UP, KNOCK_SLIDE_DECEL, TILE)
-from core.tilemap import FLOOR_SLOPES
+from core.tilemap import FLOOR_SLOPES, SLOPES
 
 KNOCKED = ('fall', 'fall_height', 'down', 'getup')     # 넘어져서 조작할 수 없는 상태
 MAX_STEP = TICK                         # 빠르게 떨어질 때 타일을 뚫지 않도록 나눠서 이동 (게임 계산 한 번 = 한 걸음)
@@ -73,6 +73,7 @@ class Player:
         self.slide_fly = False         # 경사면·얼음 끝에서 미끄러지던 속도로 날아가는 중 (착지할 때까지 조작 불가, 가로 속도가 천천히 줄어듦)
         self.slide_decel = 0.0         # 높은 곳에서 떨어져 넘어질 때 미끄러짐 감속
         self.recoil = 0.0              # 총 반동으로 밀려나는 남은 시간
+        self.prev_x, self.prev_y = x, y    # 이번 계산 직전 위치 (경사 속으로 어느 면을 넘어 들어왔는지 판단용)
         self.shots = []                # 이번에 쏜 총알 (x, y, 방향). 게임 루프가 가져가서 Bullet으로 만듦
         self.set_state('idle')
 
@@ -242,9 +243,11 @@ class Player:
                 step_x = self.recoil                # 반동이 끝나는 순간까지만 밀림
             else:
                 step_x = step
+            self.prev_x, self.prev_y = self.x, self.y
             self.move_x(self.vx * step_x, tilemap)
             self.move_y(self.vy * step, tilemap)
             self.follow_slope(step, tilemap)
+            self.push_out_of_slopes(tilemap)
             if self.recoil > 0:
                 self.recoil -= step
                 if self.recoil <= 0 and not self.is_slippery():
@@ -372,6 +375,79 @@ class Player:
                     self.on_ground = True
                     self.on_landed(impact, tilemap)
 
+    def push_out_of_slopes(self, tilemap):
+        """몸 옆면·머리(·발 모서리)가 경사 칸의 채워진 삼각형 속에 들어갔으면 밖으로 밀어냄.
+        (기존 경사 충돌은 발 가운데·머리 모서리 한 점만 봐서, 경사 옆에서 뛰거나 비스듬히 부딪히면 몸이 경사를 통과했음)
+        이번 계산 직전 위치를 보고 경사의 어느 면(비스듬한 면 / 세로 옆면 / 평평한 면)을 넘어 들어왔는지 골라 그쪽으로 되돌림"""
+        for _ in range(3):
+            moved = False
+            # 발 모서리는 발 가운데가 경사면 위·근처가 아닐 때만 봄 (경사 위에 서거나 내려앉는 중이면 원래 경사 처리가 맡음)
+            over_slope = self.on_slope or tilemap.floor_slope(self.x, self.y, TILE, TILE)
+            heights = (20, PLAYER_H / 2 + 10, PLAYER_H - 1) if over_slope else (1, 20, PLAYER_H / 2 + 10, PLAYER_H - 1)
+            points = [(self.x + sx * PLAYER_HALF_W, self.y + h, h)
+                      for sx in (-1, 1) for h in heights]
+            points.append((self.x, self.y + PLAYER_H - 1, PLAYER_H - 1))
+            ddx, ddy = self.x - self.prev_x, self.y - self.prev_y
+            for px, py, h in points:
+                head = h == PLAYER_H - 1
+                c, b = int(px // TILE), int(py // TILE)
+                ch = tilemap.at(c, b)
+                if ch not in SLOPES:
+                    continue
+                rx, ry = px - c * TILE, py - b * TILE
+                prx, pry = rx - ddx, ry - ddy             # 직전 위치에서 이 점 (같은 칸 기준)
+                mx = my = 0.0
+                if h == 1 and ch in FLOOR_SLOPES and (ry < rx if ch == '/' else ry < TILE - rx):
+                    # 발 모서리만 바닥 경사에 걸침 (몸 가운데는 경사 칸 밖): 몸 가운데가 있는 쪽으로 빼냄
+                    mx = -rx if self.x < c * TILE else TILE - rx
+                elif ch == '/' and ry < rx:                 # 오른쪽 아래가 꽉 참 (비스듬한 면은 왼쪽 위를 봄)
+                    if prx >= TILE:
+                        mx = TILE - rx                    # 오른쪽 세로 옆면으로 들어옴
+                    elif pry <= 0:
+                        my = -ry                          # 평평한 아랫면으로 들어옴
+                    else:
+                        mx = -(rx - ry)
+                elif ch == '\\' and ry < TILE - rx:     # 왼쪽 아래가 꽉 참 (비스듬한 면은 오른쪽 위를 봄)
+                    if prx <= 0:
+                        mx = -rx
+                    elif pry <= 0:
+                        my = -ry
+                    else:
+                        mx = TILE - rx - ry
+                elif ch == '[' and ry > rx:               # 왼쪽 위가 꽉 참 (비스듬한 면은 오른쪽 아래를 봄)
+                    if prx <= 0:
+                        mx = -rx
+                    elif pry >= TILE:
+                        my = TILE - ry
+                    elif head and self.vy > 0:
+                        my = -(ry - rx)
+                    else:
+                        mx = ry - rx
+                elif ch == ']' and ry > TILE - rx:        # 오른쪽 위가 꽉 참 (비스듬한 면은 왼쪽 아래를 봄)
+                    d = ry - (TILE - rx)
+                    if prx >= TILE:
+                        mx = TILE - rx
+                    elif pry >= TILE:
+                        my = TILE - ry
+                    elif head and self.vy > 0:
+                        my = -d
+                    else:
+                        mx = -d
+                else:
+                    continue
+                if abs(mx) + abs(my) <= 0.5:
+                    continue
+                self.x += mx + (0.01 if mx > 0 else -0.01 if mx < 0 else 0)
+                self.y += my + (0.01 if my > 0 else -0.01 if my < 0 else 0)
+                if mx * self.vx < 0:
+                    self.vx = 0.0
+                if my * self.vy < 0:
+                    self.vy = 0.0
+                moved = True
+                break
+            if not moved:
+                return
+
     def follow_slope(self, step, tilemap):
         """바닥 경사면에 닿으면 붙어서 미끄러지고, 경사면이 끝나면 미끄러지던 속도로 떨어짐"""
         if self.vy > 0:
@@ -384,11 +460,16 @@ class Player:
         if hit:
             self.y, up = hit
             if not self.on_slope:
+                impact = self.vy
                 self.vy = 0.0
                 self.on_ground = True
                 self.recoil = 0.0
                 if self.state in KNOCKED:
                     self.lie_flat(tilemap, move=False)  # 넘어진 채로 닿으면 누운 채 미끄러짐 (경사면에서 벗어나지 않게 위치는 그대로)
+                elif impact <= -MAX_FALL_SPEED:
+                    # 최고 속도로 떨어지다 경사면에 닿음: 평지처럼 넘어지되, 누운 채로 경사면을 미끄러져 내려감
+                    self.frozen = 0.0
+                    self.set_state('down')
                 else:
                     self.set_state('slide')
             self.on_slope = up
