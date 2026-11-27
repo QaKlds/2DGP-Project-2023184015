@@ -415,6 +415,9 @@ class Player:
         # 발밑 확인 폭은 충돌 박스 폭과 똑같이 (다르면 블록 끝에 1px 걸쳤을 때 착지↔떨어짐을 반복하며 공중에 멈춤)
         feet = (self.x - PLAYER_HALF_W, self.y - 1, self.x + PLAYER_HALF_W, self.y)
         under = tilemap.solids_in(*feet) if self.vy <= 0 else []
+        if self.vy <= 0:
+            # 천장 경사 칸([ ])의 평평한 윗면도 땅 (경사가 아닌 부분이라 서 있어도 미끄러지지 않음)
+            under += [(rect, False) for rect in tilemap.ceiling_slope_tops_in(*feet)]
         if under and not self.on_ground:
             # 땅에 거의 닿은 채로 프레임이 끝난 경우에도 확실하게 착지 처리
             self.y = max(rect[3] for rect, _ in under)

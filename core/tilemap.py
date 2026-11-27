@@ -202,6 +202,21 @@ class TileMap:
                     out.append((col, row, ch))
         return out
 
+    def ceiling_slope_tops_in(self, l, b, r, t):
+        """사각형과 겹치는, 윗면이 드러난 천장 경사 칸([ ])의 평평한 윗면: [(left, top, right, top)]
+        천장 경사 칸은 윗변이 칸 폭 전체로 꽉 차 있어서, 그 위에 서면 평평한 땅과 같음"""
+        out = []
+        row_lo, row_hi = int(b // TILE) - 1, int(t // TILE)
+        for row in range(row_lo, row_hi + 1):
+            top = (row + 1) * TILE
+            if not (b <= top <= t):
+                continue
+            for col in range(int(l // TILE), int(r // TILE) + 1):
+                if self.at(col, row) in CEIL_SLOPES and not self.is_solid(col, row + 1) \
+                        and l < (col + 1) * TILE and r > col * TILE:
+                    out.append((col * TILE, top, (col + 1) * TILE, top))
+        return out
+
     def point_in_slope(self, x, y):
         """점 (x, y)가 경사면 칸의 꽉 찬 부분 안에 있는지 (총알용)"""
         c, b = int(x // TILE), int(y // TILE)
