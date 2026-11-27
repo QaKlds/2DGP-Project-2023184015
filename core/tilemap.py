@@ -18,6 +18,9 @@ FLOATS = '=~'          # 얇은 발판
 HALF = '-'             # 반 칸 발판 (칸 가운데 24px만 있음)
 HALF_SRC_END = 8       # 반 칸 발판 그림: 1칸 발판 그림의 왼쪽 끝 8px + 오른쪽 끝 8px을 이어 붙임
 HALF_W = HALF_SRC_END * 2 * SCALE      # 화면에서 반 칸 발판 폭 (24px)
+DOT = 'o'              # 점 발판 (칸 가운데 8px만 있음, 발이 조금만 걸쳐도 섬)
+DOT_W = 8              # 화면에서 점 발판 충돌 폭 (px)
+DOT_SRC_END = 3        # 점 발판 그림: 1칸 발판 그림의 왼쪽 끝 3px + 오른쪽 끝 3px (화면 9px)
 ICE = 'I~'             # 미끄러운 타일
 TURRET = 'T'           # 레이저 장치 자리 (충돌만 하고 그림은 Laser가 그림)
 RECEIVER = '*'         # 레이저 받는 장치
@@ -157,6 +160,9 @@ class TileMap:
         if ch == HALF:
             hl = l + (TILE - HALF_W) / 2
             return hl, bt + TILE - FLOAT_SOLID_H, hl + HALF_W, bt + TILE
+        if ch == DOT:
+            dl = l + (TILE - DOT_W) / 2
+            return dl, bt + TILE - FLOAT_SOLID_H, dl + DOT_W, bt + TILE
         return l, bt, l + TILE, bt + TILE
 
     def solids_in(self, l, b, r, t):
@@ -252,7 +258,7 @@ class TileMap:
         first = self.zones[index][0]
         for b in range(first, self.rows):
             run = [c for c in range(self.cols)
-                   if self.at(c, b) in BLOCKS + FLOATS + HALF
+                   if self.at(c, b) in BLOCKS + FLOATS + HALF + DOT
                    and not self.is_solid(c, b + 1) and not self.is_solid(c, b + 2)]
             if run:
                 # 같은 줄에 발판이 여러 개면 맨 왼쪽 발판의 가운데
@@ -325,17 +331,19 @@ class TileMap:
                                   c * TILE + TILE / 2, sy, TILE, TILE)
                 elif ch == HALF:
                     self._draw_half(c * TILE + TILE / 2, sy, self.sheets[self.zone_at(b)])
+                elif ch == DOT:
+                    self._draw_half(c * TILE + TILE / 2, sy, self.sheets[self.zone_at(b)], DOT_SRC_END)
                 elif ch in SLOPES:
                     img = self.diag_sheets[self.style_at(c, b)]
                     img.clip_draw(DIAG_INDEX[ch] * TILE_SRC, 0, TILE_SRC, TILE_SRC,
                                   c * TILE + TILE / 2, sy, TILE, TILE)
 
-    def _draw_half(self, cx, cy, img):
-        """1칸 발판 그림의 양쪽 끝만 이어 붙여서 반 칸 발판으로 그림"""
+    def _draw_half(self, cx, cy, img, end=HALF_SRC_END):
+        """1칸 발판 그림의 양쪽 끝(end px씩)만 이어 붙여서 작은 발판으로 그림 (반 칸 발판: 8px씩, 점 발판: 3px씩)"""
         col, row = FLOAT_SINGLE
         bottom = img.h - (row + 1) * TILE_SRC
-        part = HALF_SRC_END * SCALE                     # 화면에서 한쪽 조각 폭 (12px)
-        img.clip_draw(col * TILE_SRC, bottom, HALF_SRC_END, TILE_SRC,
+        part = end * SCALE                              # 화면에서 한쪽 조각 폭
+        img.clip_draw(col * TILE_SRC, bottom, end, TILE_SRC,
                       cx - part / 2, cy, part, TILE)
-        img.clip_draw(col * TILE_SRC + TILE_SRC - HALF_SRC_END, bottom, HALF_SRC_END, TILE_SRC,
+        img.clip_draw(col * TILE_SRC + TILE_SRC - end, bottom, end, TILE_SRC,
                       cx + part / 2, cy, part, TILE)
