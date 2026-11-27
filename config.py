@@ -43,10 +43,11 @@ PLAYER_H = 66
 
 # 이동 수치 (800x600 / 배율 1 에서 맞춘 값 x SCALE)
 MOVE_SPEED = 300 * SCALE      # px/s
-JUMP_SPEED = 600 * SCALE      # px/s  (꾹 누를 때 최대 점프)
-JUMP_CUT_SPEED = 200 * SCALE  # px/s  (상승 중 키를 떼면 이 속도로 줄임 → 낮은 점프)
-GRAVITY = 2200 * SCALE        # px/s^2
-MAX_FALL_SPEED = 1500         # px/s  떨어지는 최고 속도 (가만히 떨어지기 시작해서 약 340px, 7칸이면 도달)
+# 점프: 꾹 누르면 약 5칸(240px) 높이. 공중에 떠 있는 시간은 예전과 비슷하게 0.6초 안팎 (중력도 같이 올림)
+JUMP_SPEED = 1100 * SCALE     # px/s  (꾹 누를 때 최대 점프)
+JUMP_CUT_SPEED = JUMP_SPEED / 3   # px/s  (상승 중 키를 떼면 이 속도로 줄임 → 낮은 점프)
+GRAVITY = 3660 * SCALE        # px/s^2
+MAX_FALL_SPEED = 2400         # px/s  떨어지는 최고 속도 (가만히 떨어지기 시작해서 약 525px, 11칸이면 도달 → 그만큼 떨어지면 넘어짐)
 
 # 얼음
 ICE_ACCEL = 900               # 얼음 위에서 원하는 속도까지 붙는 가속도 (px/s^2)

@@ -1,7 +1,7 @@
 from pico2d import *
 
 from config import WIDTH, HEIGHT, FULLSCREEN, TILE, PLAYER_H, TICK, MAX_FRAME_TIME
-from level_data import TEST_MAP, TEST_ZONES
+from level_data import ROOM_MAP, ROOM_ZONES      # 예전 맵은 TEST_MAP, TEST_ZONES
 from core.camera import Camera
 from core.collision import overlap
 from core.tilemap import TileMap
@@ -68,7 +68,7 @@ def play(hud, pause):
     """게임 한 판. 일시정지 메뉴에서 고른 'restart' / 'main_menu' / 'quit'을 돌려줌 (창을 닫으면 'quit').
     hud(최고기록)와 pause(메뉴 그림)는 판이 바뀌어도 이어서 쓰도록 밖에서 받음"""
     hide_cursor()
-    tilemap = TileMap(TEST_MAP, TEST_ZONES)
+    tilemap = TileMap(ROOM_MAP, ROOM_ZONES)
     backgrounds = [load_image(p) for p in BACKGROUNDS]
     tower = Tower()
     player = Player(*tilemap.start)
