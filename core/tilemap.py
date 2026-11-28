@@ -20,9 +20,9 @@ FLOATS = '=~'          # 얇은 발판
 HALF = '-'             # 반 칸 발판 (칸 가운데 24px만 있음)
 HALF_SRC_END = 8       # 반 칸 발판 그림: 1칸 발판 그림의 왼쪽 끝 8px + 오른쪽 끝 8px을 이어 붙임
 HALF_W = HALF_SRC_END * 2 * SCALE      # 화면에서 반 칸 발판 폭 (24px)
-DOT = 'o'              # 점 발판 (칸 가운데 8px만 있음, 발이 조금만 걸쳐도 섬)
-DOT_W = 8              # 화면에서 점 발판 충돌 폭 (px)
-DOT_SRC_END = 3        # 점 발판 그림: 1칸 발판 그림의 왼쪽 끝 3px + 오른쪽 끝 3px (화면 9px)
+DOT = 'o'              # 점 발판 (칸 가운데 16px만 있음, 발이 조금만 걸쳐도 섬)
+DOT_W = 16             # 화면에서 점 발판 충돌 폭 (px)
+DOT_SRC_END = 5        # 점 발판 그림: 1칸 발판 그림의 왼쪽 끝 5px + 오른쪽 끝 5px (화면 15px)
 ICE = 'I~'             # 미끄러운 타일
 TURRET = 'T'           # 레이저 장치 자리 (충돌만 하고 그림은 Laser가 그림)
 RECEIVER = '*'         # 레이저 받는 장치
@@ -261,19 +261,30 @@ class TileMap:
         구간 시작 줄 이상에서 가장 낮은 평평한 땅(경사면 제외, 위 2칸이 빈 곳)의 가운데"""
         if index == 0:
             return self.start
-        first = self.zones[index][0]
-        for b in range(first, self.rows):
+        return self._ground_in_rows(range(self.zones[index][0], self.rows)) or self.start
+
+    def spot_from_row(self, row, look_up=30):
+        """순간이동용: 발이 row줄 이상(look_up줄 안)인 가장 낮은 평평한 땅의 가운데 (x, y).
+        그 안에 없으면 row줄 아래로 가장 가까운 땅, 0줄이면 시작 위치"""
+        if row <= 0:
+            return self.start
+        return (self._ground_in_rows(range(row - 1, min(self.rows, row + look_up)))
+                or self._ground_in_rows(range(row - 2, -1, -1)) or self.start)
+
+    def _ground_in_rows(self, rows):
+        """주어진 줄 순서대로 보면서 처음 찾은 평평한 땅(경사면 제외, 위 2칸이 빈 곳) 위 발 위치.
+        같은 줄에 발판이 여러 개면 맨 왼쪽 발판의 가운데"""
+        for b in rows:
             run = [c for c in range(self.cols)
                    if self.at(c, b) in BLOCKS + FLOATS + HALF + DOT
                    and not self.is_solid(c, b + 1) and not self.is_solid(c, b + 2)]
             if run:
-                # 같은 줄에 발판이 여러 개면 맨 왼쪽 발판의 가운데
                 end = 0
                 while end + 1 < len(run) and run[end + 1] == run[end] + 1:
                     end += 1
                 c = (run[0] + run[end]) / 2
                 return (c + 0.5) * TILE, (b + 1) * TILE
-        return self.start
+        return None
 
     def style_at(self, c, b):
         """(c, b) 주변 8칸에 얼음이 있으면 'frozen', 아니면 그 줄의 구간 무늬 - 레이저 장치 무늬를 주변 땅에 맞추는 용도"""

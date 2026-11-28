@@ -28,11 +28,12 @@ from ui.title import TitleScreen
 #   ←→ : 이동          ↑ : 점프 (짧게 누르면 낮은 점프)      Z : 공격
 #   TAB : 무기 교체 (칼 <-> 총)       X : 제자리 넘어지기
 #   R   : 시작 위치로 돌아가기        ESC : 일시정지 메뉴 (계속하기 / 다시 시작 / 시작화면 / 종료, ESC 다시 누르면 계속)
-#   1~4 : 각 구간(나무/벽돌/얼음/금) 첫 발판으로 순간이동 (테스트용)
+#   0~9 : 그 숫자 x 100줄 높이 위의 첫 발판으로 순간이동 (테스트용, 0 = 시작 위치)
 # ---------------------------------------------------------------
 
 BACKGROUNDS = ['asset/bg_low.png', 'asset/bg_mid.png', 'asset/bg_high.png']
-TELEPORT_KEYS = {SDLK_1: 0, SDLK_2: 1, SDLK_3: 2, SDLK_4: 3}     # 숫자 키 → 구간 번호
+TELEPORT_KEYS = {SDLK_0: 0, SDLK_1: 100, SDLK_2: 200, SDLK_3: 300, SDLK_4: 400,
+                 SDLK_5: 500, SDLK_6: 600, SDLK_7: 700, SDLK_8: 800, SDLK_9: 900}     # 숫자 키 → 순간이동할 줄
 SHOOTER_CLASSES = {'A': Archer, 'K': Gargoyle, 'F': FrostMage}  # 맵 글자 → 원거리 적
 
 
@@ -119,7 +120,7 @@ def play(hud, pause):
             elif e.type == SDL_KEYDOWN and e.key in TELEPORT_KEYS:
                 # 플레이어만 옮김 (함정·적은 그대로). 들고 있던 무기는 유지
                 weapon = player.weapon
-                player = Player(*tilemap.zone_start(TELEPORT_KEYS[e.key]))
+                player = Player(*tilemap.spot_from_row(TELEPORT_KEYS[e.key]))
                 player.weapon = weapon
                 camera.snap(player.y)
             else:
