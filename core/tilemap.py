@@ -23,6 +23,8 @@ HALF_W = HALF_SRC_END * 2 * SCALE      # 화면에서 반 칸 발판 폭 (24px)
 DOT = 'o'              # 점 발판 (칸 가운데 16px만 있음, 발이 조금만 걸쳐도 섬)
 DOT_W = 16             # 화면에서 점 발판 충돌 폭 (px)
 DOT_SRC_END = 5        # 점 발판 그림: 1칸 발판 그림의 왼쪽 끝 5px + 오른쪽 끝 5px (화면 15px)
+POST = 'O'             # 기둥 블록 (점 발판과 같은 폭 16px, 세로는 한 칸 꽉 참. 위아래로 이어 붙이면 긴 기둥)
+POST_SRC_W = 10        # 기둥 그림: 블록 그림 가운데 10px만 잘라 씀 (화면 15px)
 ICE = 'I~'             # 미끄러운 타일
 TURRET = 'T'           # 레이저 장치 자리 (충돌만 하고 그림은 Laser가 그림)
 RECEIVER = '*'         # 레이저 받는 장치
@@ -169,6 +171,9 @@ class TileMap:
         if ch == DOT:
             dl = l + (TILE - DOT_W) / 2
             return dl, bt + TILE - FLOAT_SOLID_H, dl + DOT_W, bt + TILE
+        if ch == POST:
+            dl = l + (TILE - DOT_W) / 2
+            return dl, bt, dl + DOT_W, bt + TILE
         return l, bt, l + TILE, bt + TILE
 
     def solids_in(self, l, b, r, t):
@@ -276,7 +281,7 @@ class TileMap:
         같은 줄에 발판이 여러 개면 맨 왼쪽 발판의 가운데"""
         for b in rows:
             run = [c for c in range(self.cols)
-                   if self.at(c, b) in BLOCKS + FLOATS + HALF + DOT
+                   if self.at(c, b) in BLOCKS + FLOATS + HALF + DOT + POST
                    and not self.is_solid(c, b + 1) and not self.is_solid(c, b + 2)]
             if run:
                 end = 0
@@ -350,6 +355,8 @@ class TileMap:
                     self._draw_half(c * TILE + TILE / 2, sy, self.sheets[self.zone_at(b)])
                 elif ch == DOT:
                     self._draw_half(c * TILE + TILE / 2, sy, self.sheets[self.zone_at(b)], DOT_SRC_END)
+                elif ch == POST:
+                    self._draw_post(c, b, sy)
                 elif ch in SLOPES:
                     style = self.style_at(c, b)
                     open_side = b + 1 if ch in FLOOR_SLOPES else b - 1     # 경사면이 향하는 쪽 칸
@@ -359,6 +366,14 @@ class TileMap:
                         img = self.diag_sheets[style]
                     img.clip_draw(DIAG_INDEX[ch] * TILE_SRC, 0, TILE_SRC, TILE_SRC,
                                   c * TILE + TILE / 2, sy, TILE, TILE)
+
+    def _draw_post(self, c, b, sy):
+        """기둥 블록: 그 구간 블록 그림의 가운데를 좁게 잘라 그림. 위가 비어 있으면 윗면(풀·이끼) 그림, 아니면 속 그림"""
+        img = self.sheets[self.zone_at(b)]
+        col, row = TOP[c % 3] if not self.is_solid(c, b + 1) else FILL[(c * 7 + b * 13) % len(FILL)]
+        left = col * TILE_SRC + (TILE_SRC - POST_SRC_W) // 2
+        img.clip_draw(left, img.h - (row + 1) * TILE_SRC, POST_SRC_W, TILE_SRC,
+                      c * TILE + TILE / 2, sy, POST_SRC_W * SCALE, TILE)
 
     def _draw_half(self, cx, cy, img, end=HALF_SRC_END):
         """1칸 발판 그림의 양쪽 끝(end px씩)만 이어 붙여서 작은 발판으로 그림 (반 칸 발판: 8px씩, 점 발판: 3px씩)"""
