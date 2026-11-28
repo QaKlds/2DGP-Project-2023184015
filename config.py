@@ -23,9 +23,12 @@ TOWER_PIECE = 320                   # 탑 조각 원본 크기 (양옆 기둥 24
 TOWER_PILLAR = 24                   # 기둥 원본 폭
 TOWER_INNER_COL = 6                 # 탑 안쪽이 시작하는 맵 칸 (6~33칸이 안쪽 28칸)
 TOWER_INNER_COLS = 28               # 안쪽 칸 수 (안쪽 1360px 중 1344px, 남는 8px씩은 기둥 옆 여백)
-# 아래부터 쌓는 탑 조각 (테스트용으로 짧게: 맨 아래 → 구간 연결 조각들 → 꼭대기)
-TOWER_PIECES = ['tower_bottom', 'tower_trans_wood_brick', 'tower_trans_brick_frozen',
-                'tower_trans_frozen_gold', 'tower_top']
+# 아래부터 쌓는 탑 조각 30개 (1개 = 33.3줄, 합쳐서 1000줄).
+# 구간 무늬가 바뀌는 높이: 연결 조각 그림 기준 나무→벽돌 259줄, 벽돌→얼음 492줄, 얼음→금 726줄. 꼭대기 문은 967줄 바닥 위
+TOWER_PIECES = (['tower_bottom'] + ['tower_wood'] * 6 + ['tower_trans_wood_brick']
+                + ['tower_brick'] * 6 + ['tower_trans_brick_frozen']
+                + ['tower_frozen'] * 6 + ['tower_trans_frozen_gold']
+                + ['tower_gold'] * 7 + ['tower_top'])
 
 # 화면 왼쪽 위 HUD (시간 / 높이 패널). 값은 원본 px (asset/hud/hud.json 참고)
 HUD_SCALE = 2                 # 원본 패널 128x32 → 화면 256x64
