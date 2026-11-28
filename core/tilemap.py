@@ -1,3 +1,5 @@
+import os
+
 from pico2d import load_image
 
 from config import TILE, TILE_SRC, SCALE, HEIGHT
@@ -121,6 +123,10 @@ class TileMap:
                        for style in ('wood', 'brick', 'frozen', 'gold')}
         self.diag_sheets = {style: load_image(f'asset/tiles/tiles_diag_{style}.png')
                             for style in ('wood', 'brick', 'frozen', 'gold')}
+        # 풀·이끼가 덮인 경사 그림 (있는 무늬만): 바닥 경사는 위가, 천장 경사는 아래가 트여 있을 때 씀
+        self.diag_top_sheets = {style: load_image(f'asset/tiles/tiles_diag_{style}_top.png')
+                                for style in ('wood', 'brick', 'frozen', 'gold')
+                                if os.path.exists(f'asset/tiles/tiles_diag_{style}_top.png')}
 
     @staticmethod
     def _move_range(lines, c0, c1, b, axis):
@@ -334,7 +340,12 @@ class TileMap:
                 elif ch == DOT:
                     self._draw_half(c * TILE + TILE / 2, sy, self.sheets[self.zone_at(b)], DOT_SRC_END)
                 elif ch in SLOPES:
-                    img = self.diag_sheets[self.style_at(c, b)]
+                    style = self.style_at(c, b)
+                    open_side = b + 1 if ch in FLOOR_SLOPES else b - 1     # 경사면이 향하는 쪽 칸
+                    if style in self.diag_top_sheets and not self.is_solid(c, open_side):
+                        img = self.diag_top_sheets[style]
+                    else:
+                        img = self.diag_sheets[style]
                     img.clip_draw(DIAG_INDEX[ch] * TILE_SRC, 0, TILE_SRC, TILE_SRC,
                                   c * TILE + TILE / 2, sy, TILE, TILE)
 

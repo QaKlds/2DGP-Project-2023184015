@@ -8,7 +8,7 @@ from config import CELL, SCALE, TILE, LASER_KNOCK
 # 방향별 한 칸 이동량
 DIRS = {'right': (1, 0), 'left': (-1, 0), 'up': (0, 1), 'down': (0, -1)}
 
-# 땅 속에 박히는 장치 그림: 무늬(주변 타일)별로 '오른쪽', '위쪽' 시트가 있고 왼쪽·아래쪽은 뒤집어서 씀
+# 땅 속에 박히는 장치 그림: 무늬(주변 타일)별로 방향마다 시트가 있음 (없는 방향은 오른쪽·위쪽 시트를 뒤집어서 씀)
 DEVICE_SHEET = 'asset/trap/laser_{style}_{base}.png'
 DEVICE_BASE = {'right': ('right', ''), 'left': ('right', 'h'), 'up': ('up', ''), 'down': ('up', 'v')}
 # 땅 윗면(위 칸이 비어 있음)에 박힌 장치는 잔디·눈이 덮인 그림을 씀. 없으면 반대 방향 그림을 뒤집어 쓰고, 그것도 없으면 위 그림
@@ -126,6 +126,10 @@ class Laser:
                 path = TOP_SHEET.format(style=style, direction=mirror)
                 if os.path.exists(path):
                     return Laser.image(path), 'h'
+        # 그 방향 그림이 따로 있으면 그대로 씀 (아래쪽은 위쪽을 뒤집은 그림이 아니라 따로 그려져 있음)
+        path = DEVICE_SHEET.format(style=style, base=direction)
+        if os.path.exists(path):
+            return Laser.image(path), ''
         base, flip = DEVICE_BASE[direction]
         return Laser.image(DEVICE_SHEET.format(style=style, base=base)), flip
 
